@@ -169,7 +169,7 @@ clientNav[, Gross:= aNav + pFee + aFee + Vat + TF]
 ####
 
 
-cli <- "U1427234"
+cli <- "U2202020" # U1427234"
 plot(clientNav[ClientId== cli, 
                .(TradeDate, exp(cumsum(c(0, ROC(Gross)[-1]))))], type="l", col="red")
 
@@ -178,7 +178,7 @@ lines(clientNav[ClientId== cli,
       
 
 clientNav[, 
-          .(TradeDate, aNav, Gross, 
+          .(TradeDate, NAV, aNav, Gross, 
             c(0, exp(cumsum(ROC(aNav)[-1]))),
             c(0, exp(cumsum(ROC(Gross)[-1])))),
           by= ClientId][ , .SD[.N,], by= ClientId]

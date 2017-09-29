@@ -111,8 +111,7 @@ clientNav[is.na(InOut), InOut:= 0]
 clientNav[is.na(Fee),   Fee:=   0]
 
 # adjust Nav by accounting fees on correct dates
-clientNav[, aNav:= adjNav(NAV), 
-          by= ClientId]
+clientNav[, aNav:= calcAdjNav(NAV)]
 
 # calc HighWaterMark
 clientNav[, Hwm:=  calcHwm(aNav), 
@@ -156,7 +155,7 @@ setcolorder(clientNav, c(colnames(clientNav)[-3], colnames(clientNav)[3]))
 clientNav[, Gross:= aNav + pFee + aFee + Vat + TF]
 
 ####
-############ END OF USER INPUT AREA
+############ END OF SCRIPT
 ################################################################################
 ########################
 

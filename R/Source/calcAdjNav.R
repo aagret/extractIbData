@@ -1,6 +1,6 @@
 
 # function to adjust Nav to account fees under proper date
-adjNav <- function(db= clientNav) {
+calcAdjNav <- function(db= clientNav) {
     
     db <- clientNav[Fee != 0, .(ClientId, TradeDate, Fee)]
     
@@ -15,12 +15,12 @@ adjNav <- function(db= clientNav) {
     
     setkey(db, ClientId, TradeDate)
     
-    db <- db[clientNav, roll=-Inf]
+    db <- db[clientNav, roll= -Inf]
     
-    db[, Net:= NAV ]
-    db[TradeDate < PayDate & TradeDate >= Qq, Net:= Net - QFee, by= ClientId]
+    db[, aNav:= NAV ]
+    db[TradeDate < PayDate & TradeDate >= Qq, aNav:= aNav - QFee, by= ClientId]
     
-    return(db$Net)
+    return(db$aNav)
     
 }
     

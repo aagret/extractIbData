@@ -29,7 +29,7 @@ source("R/Source/getAdvFee.R")
 ##############################################
 
 # extract Equity Trades
-source("R/Source/extractEqTrades")
+source("R/Source/extractEqTrades.R")
 
 # extract historical Fx rates
 source("R/Source/extractFxHisto.R")

@@ -4,15 +4,17 @@
 extractEqTrades <- function(db= ibData) {
     
     # extract equities datas
-    ytdTrades <- ibData[ibData$AssetClass == "STK", ]
+    db <- ibData[ibData$AssetClass == "STK", ]
     
     #format datas
-    ytdTrades[, ":=" (TradeDate=  as.Date(TradeDate, format= "%Y%m%d"),
-                      Quantity=   as.numeric(Quantity),
-                      TradePrice= as.numeric(TradePrice),
-                      Proceeds=   abs(as.numeric(Proceeds)))] 
+    db[, ":=" (TradeDate=  as.Date(TradeDate, format= "%Y%m%d"),
+               Quantity=   as.numeric(Quantity),
+               TradePrice= as.numeric(TradePrice),
+               Proceeds=   abs(as.numeric(Proceeds)))] 
     
-    return(ytdTrades)
+    setkey(db, TradeDate, CurrencyPrimary)
+    
+    return(db)
     
 }
     

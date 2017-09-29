@@ -8,12 +8,13 @@ getClientNav <- function(token) {
     clientNav <- getIbReport(reportId, token)
     
     # remove dual header
-    clientNav <- clientNav[ClientAccountID != "ClientAccountID",]
+    clientNav <- clientNav[ClientAccountID != "ClientAccountID", ]
     
     #rerformat data
     clientNav[,':=' (ReportDate= as.Date(ReportDate, format= "%Y%m%d"),
                      Total= as.numeric(Total))]
-    colnames(clientNav) <- c("ClientId", "Date", "NAV")
+    
+    colnames(clientNav) <- c("ClientId", "TradeDate", "NAV")
     
     return(clientNav)
     

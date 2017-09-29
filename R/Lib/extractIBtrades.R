@@ -2,6 +2,7 @@
 ## query IB flex statement
 
 library(XML)
+library(methods)
 library(httr)
 library(data.table)
 library(TTR)
@@ -11,13 +12,16 @@ library(ggplot2)
 source("R/ibFunctions")
 
 
-# initiate (token to be updated manually periodically)
-token       <- "409423572751697446678243"
+# initiate (IB token to be updated manually periodically)
+token <- "409423572751697446678243"
+
+# fees metrics (in%)
+advFee  <- 0.5
+perfFee <- 20
 
 
-
-# download YTD IB Trades
-ibData <- getYtdTrades(token)
+# download YTD IB datas
+ibData <- getYtdIBData(token)
 
 # extract Fx history from ibData
 fxHisto <- extractFxHisto(ibData)
@@ -26,8 +30,6 @@ fxHisto <- extractFxHisto(ibData)
 ytdTrades <- extractEqTrades(ibData)
 
 # attribute correct Fx to each trade
-setkey(yearlyTrades, TradeDate, CurrencyPrimary)
-
 ytdTrades <- fxHisto[ytdTrades]
 
 # set CHF trade to 1
@@ -36,15 +38,6 @@ ytdTrades[CurrencyPrimary == "CHF", Fx:= 1L]
 # extract Swiss Stamp from trade list
 timbre <- extractSwissStamp(ytdTrades)
 
-
-
-
-    
-    
-    
-    
-################# part 2
-
 # download YTD Artha fees from  IB
 advFee <- getAdvFee(token)
 
@@ -52,8 +45,9 @@ advFee <- getAdvFee(token)
 inOut <- getInOut(token)
 
 # download clients NAV history
-
 clientNav <- getClientNav(token)
+
+
 
 # merge NAV, Fees and inOut datas
 setkey(inOut,     ClientId, Date)
@@ -63,12 +57,17 @@ setkey(clientNav, ClientId, Date)
 clientNav <-  inOut[advFee[clientNav[NAV !=0,]]]
 
 # format datas
-clientNav[is.na(InOut), InOut:=0]
+clientNav[is.na(InOut),   InOut:=0]
 clientNav[is.na(advFee), advFee:=0]
 
 
 
+
+
 # calc returns
+
+
+# GROSS perf ???
 clientNav[, Gross:= NAV + advFee - InOut]
 
 clientNav[, ibPerf:= exp(cumsum(c(0, ROC(NAV, type= "continuous", na.pad=FALSE)))), 
@@ -81,6 +80,10 @@ clientNav[is.na(grossPerf), grossPerf:=0]
 
 clientNav[, grossPerf:= exp(cumsum(grossPerf)), by= ClientId]
 
+
+
+
+### HWM and attribute date of fee
 
 dt <- clientNav[advFee != 0, .(ClientId, Date, advFee)]
 dt[, Qq:=as.Date(cut(as.Date(cut(Date, "quarter")), "quarter")) - 1]

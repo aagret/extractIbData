@@ -1,17 +1,20 @@
 
 # function to extract deposit/withdrawals from UB accounts
-getInOut <- function(token) {
+getInOut <- function(tok= token) {
     
     # exctract in/out
     reportId <- "265392"
-    inOut    <- getIbReport(reportId, token)
+    db    <- getIbReport(reportId, tok)
     
     # format data and remove useless columns
-    inOut[Activity.Code == "DEP", .(ClientAccountID, Report.Date, Amount)]
-    inOut[, ':=' (Report.Date= as.Date(Report.Date, format= "%Y%m%d"), 
-                  Amount= as.numeric(Amount))]
-    colnames(inOut) <- c("ClientId", "Date", "InOut")
+    db <- db[Activity.Code == "DEP", .(ClientAccountID, Report.Date, Amount)]
     
-    return(inOut)
+    db[, ':=' (Report.Date= as.Date(Report.Date, format= "%Y%m%d"), 
+               Amount= as.numeric(Amount))]
+    
+    
+    colnames(db) <- c("ClientId", "TradeDate", "InOut")
+    
+    return(db)
     
 }

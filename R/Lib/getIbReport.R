@@ -10,25 +10,24 @@ getIbReport <- function(id= reportId, tok= token){
     queryUrl     <- paste0(baseUrl, tok, "&q=", id, "&", version)
     
     # get data and parse xml 
-    xmlFile <- xmlTreeParse(GET(queryUrl))
-    xmlTop  <- xmlRoot(xmlFile) 
-    xmlData <- xmlSApply(xmlTop, function(x) xmlSApply(x, xmlValue)) 
+    xmlData <- xmlParse(GET(queryUrl))
+    xmlData <- xmlRoot(xmlData) 
+    xmlData <- xmlSApply(xmlData, function(x) xmlSApply(x, xmlValue)) 
     
     # url of requested report
-    reportUrl <- paste0(xmlData[2], "?q=", xmlData[1], "&t=", token, "&", version)
+    queryUrl <- paste0(xmlData[2], "?q=", xmlData[1], "&t=", token, "&", version)
     
-    
+    # try until resulting not empty
+    options(stringsAsFactors = FALSE)
     for (try in 1:20) {
+    
+        db <- read.csv(queryUrl, sep=",", header= TRUE)
         
-        options(stringsAsFactors = FALSE)
-        reportDoc <- read.csv(reportUrl, sep=",", header= TRUE)
+        if (!grepl("FlexStatementResponse", colnames(db)[1])) break
         
-        if (!grepl("FlexStatementResponse", colnames(reportDoc)[1])) break
         Sys.sleep(5)
     }
     
+    return(setDT(db))
     
-    reportDoc <- setDT(reportDoc)
-    
-    return(reportDoc)
 }

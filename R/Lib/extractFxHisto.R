@@ -1,22 +1,21 @@
 
 
 # Function to retrieve Fx history from IB Trades
-extractFxHisto <- function(db = ibdata) {
+extractFxHisto <- function(db = ibData) {
     
     # extract Fx vs CHF history
-    fxHisto <- db[AssetClass =="CHF",]
+    db <- db[AssetClass =="CHF", .(ClientId, Currency, Symbol)]
+
+    # rename and format data 
+    colnames(db)[c(1, 3)] <- c("TradeDate", "Fx")
     
-    # format data and remove useless columns
-    fxHisto[, Symbol:= as.numeric(Symbol)][ ,c(1,2,4)]
+    db[, ':=' (Fx= as.numeric(Fx),
+               TradeDate= as.Date(TradeDate, format= "%Y%m%d"))]
     
-    # rename columns
-    colnames(fxHisto)[c(1,3)] <- c("TradeDate", "Fx")
-    
-    # format datas
-    fxHisto[, TradeDate:= as.Date(TradeDate, format= "%Y%m%d")]
-    
-    setDT(fxHisto, key= c("TradeDate", "CurrencyPrimary"))
-    
-    return(fxHisto)
+    # cast in worksheet form
+    #db <- dcast(db, TradeDate + Fx ~ Currency, 
+    #                 value.var="Symbol")
+
+    return(db)
     
 }

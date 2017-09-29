@@ -1,49 +1,68 @@
-## calc perf.fee
 
-cli <- "U1427234"
-cliData <- clientNav[ClientId == cli, .(ClientId, Date,
-                                        NAV, Gross, Net)] 
-
-
-fee <- 0.5
-perfFee <- 20
-
-# get today's and current quarter Dates
-today   <- Sys.Date()
-endDt   <- as.Date(cut(as.Date(cut(today, "quarter")), "quarter")) -1
-startDt <- as.Date(cut(as.Date(cut(today, "quarter")) - 90, "quarter")) - 1
-
-
-
-#cliData[, Net]
-
-cliData[, Hwm:= shift(cummax(Net), fill = 0)]
-cliData$Hwm[1] <- cliData$Net[1]
-
+#
+# calc net p&L
 cliData[, PnL:= cumsum(c(0, diff(Net)))]
 
-cliData[Net >  Hwm, pFee:= (Net - Hwm) * 0.20]
-cliData[Net <= Hwm, pFee:=0]
-cliData[, pFee:= cumsum(pFee)]
+# plot and display results
 
-cliData[, aFee:= cumsum(c(0, diff(Date)) * Net * 0.5 / 36500)]
 
-cliData[, Vat:= (pFee + aFee) * 8 / 100]
 
-cliData[, newG:= Net + pFee + aFee + Vat]
-
-plot (exp(cumsum(ROC(cliData[, newG])[-1])), type="l")
-lines(exp(cumsum(ROC(cliData[, Net ])[-1])), col="red")
+plot (exp(cumsum(ROC(clientNav[ClientId == "U1427234", Gross])[-1])), type="l")
+lines(exp(cumsum(ROC(clientNav[ClientId == "U1427234", aNav ])[-1])), col="red")
 
 last(exp(cumsum(ROC(cliData[Date >= "2016-12-30", .(Date, NAV, Net, newG)])[-1])), 1)
-last(exp(cumsum(ROC(cliData[Date >= "2017-06-30", .(Date, NAV, Net, newG)])[-1])), 1)
-last(exp(cumsum(ROC(cliData[Date >= "2017-08-31", .(Date, NAV, Net, newG)])[-1])), 1)
 
-last(exp(cumsum(ROC(cliData[Date >= "2016-12-30" & Date <= "2017-06-30",
-                                    .(Date, NAV, Net, newG)])[-1])), 1)
 
-plot(cliData$Gross, type="l")
-lines(cliData$newG, col="red")
+# graph result
+g <- ggplot(clientNav) + 
+    geom_line(aes(x=TradeDate, y= c(1, ret(aNav)), colour="aNav")) +
+    geom_line(aes(x=TradeDate, y= c(1, ret(Gross)), colour="Gross")) +
+    facet_grid(ClientId ~.)
+
+ret <- function(nav = aNav) {
+    ret <- exp(cumsum(ROC(nav)[-1]))
+    return(ret)
+}
+
+
+plot(clientNav[ClientId=="U2202020", .(TradeDate, Gross)], type="l")
+
+clientNav[, exp(cumsum(c(0, ROC(aNav)))), by=ClientId]
+
+
+
+ClientNav[, ibPerf:= exp(cumsum(c(0, ROC(NAV, type= "continuous", na.pad=FALSE)))), 
+          by= ClientId]
+
+clientNav[, grossPerf:= log(Gross / shift(NAV)),
+          by= ClientId]
+
+clientNav[is.na(grossPerf), grossPerf:=0]
+
+clientNav[, grossPerf:= exp(cumsum(grossPerf)), by= ClientId]
+
+
+
+
+#PRINT
+#############
+
+
+
+header <- cat("ARTHA FINANCE SA", "\t", "\t", "REGISTRE DU TIMBRE FEDERAL DE NEGOCIATION,", "\n", 
+              "Interactive Broker (U.K.) Ltd.", "\t", "BOURSE, EMISSIONS ET FONDS DE PLACEMENT DU", Sys.Date(), "\t", Sys.time())
+
+timbre[, .I, by=c("OrderTime", "Description") ]
+
+
+one <- timbre[OrderTime=="20170911;112915",]
+
+
+
+
+
+
+
 
 
 

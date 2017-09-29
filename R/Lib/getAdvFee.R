@@ -4,15 +4,17 @@ getAdvFee <- function(tok= token) {
     
     # extract advisory Fees
     reportId <- "265101"
-    advFee <- getIbReport(reportId, token)
+    db <- getIbReport(reportId, token)
+    
+    setDT(db)
     
     # remove useless columns
-    advFee[Fee.Type == "Fees", .(ClientAccountID, Date, Net)]
+    db <- db[Fee.Type == "Fees", .(ClientAccountID, Date, Net)]
     
     # format datas adn rename columns
-    advFee[, Date:= as.Date(Date, format= "%Y%m%d")]
-    colnames(advFee) <- c("ClientId", "Date", "advFee")
+    db[, Date:= as.Date(Date, format= "%Y%m%d")]
+    colnames(db) <- c("ClientId", "TradeDate", "Fee")
     
-    return(advFee)
+    return(db)
     
 }

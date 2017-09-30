@@ -3,7 +3,8 @@
 extractSwissStamp <- function(trade= ytdTrades) {
 
     # get today's and current quarter Dates
-    qDts <- quarterDates(Sys.Date())
+    #qDts <- quarterDates(Sys.Date())
+    qDts <- as.Date("2016-12-31")
     
     # extract Timbre datas
     db <- trade[TradeDate >= qDts[1] &  AssetClass =="STK",

@@ -152,7 +152,12 @@ clientNav[, TF:= cumsum(TF), by= ClientId]
 setcolorder(clientNav, c(colnames(clientNav)[-3], colnames(clientNav)[3]))
 
 # calc Gross NAv ex Fees, VAt and Stramp Tax
-clientNav[, Gross:= aNav + pFee + aFee + Vat + TF]
+clientNav[, Gross:= aNav + cumsum(Fee), by= ClientId]
+
+# calc Net of fee Perormance (artha fee, all cost)
+clientNav[, fNet:= Gross - pFee - aFee - Vat - TF, by= ClientId]
+clientNav[, cNet:= Gross - pFee - aFee - Vat - TF, by= ClientId]
+
 
 ####
 ############ END OF SCRIPT
@@ -174,15 +179,22 @@ plot(clientNav[ClientId== cli,
                .(TradeDate, exp(cumsum(c(0, ROC(Gross)[-1]))))], type="l", col="red")
 
 lines(clientNav[ClientId== cli, 
-                .(TradeDate, exp(cumsum(c(0, ROC(aNav)[-1]))))], col="blue")
-      
+                .(TradeDate, exp(cumsum(c(0, ROC(cNet)[-1]))))], col="blue")
 
-clientNav[, 
-          .(TradeDate, NAV, aNav, Gross, 
-            c(0, exp(cumsum(ROC(aNav)[-1]))),
-            c(0, exp(cumsum(ROC(Gross)[-1])))),
+
+
+
+clientNav[, .(TradeDate, NAV, aNav, Gross, cNet,
+              c(0, exp(cumsum(ROC(aNav)[-1]))),
+              c(0, exp(cumsum(ROC(Gross)[-1]))),
+              c(0, exp(cumsum(ROC(cNet)[-1])))),
           by= ClientId][ , .SD[.N,], by= ClientId]
 
+
+clientNav[, .SD[.N], by= ClientId,
+          .SDcols= c("pFee", "aFee", "Vat", "TF")]
+
+clientNav[TradeDate %in% as.Date(c("2017-03-31", "2017-06-30")), .SD, by= ClientId]
 
 ####
 ############ END OF TEST AND DEBUG ZONE

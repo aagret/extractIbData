@@ -4,10 +4,10 @@
 ############ USER INPUT AREA 
 ####
 
+
 ########################
 ### Define Variables ###
 ########################
-
 
 # IB_Artha communication chanel token# (to updated periodically ie yearly)
 
@@ -24,6 +24,7 @@ advFee  <-  0.50
 #####       ####
 perfFee <-  20
 #####       ####
+
 
 ####
 ############ END OF USER INPUT AREA

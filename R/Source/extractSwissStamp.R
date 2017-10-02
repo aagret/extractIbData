@@ -51,8 +51,10 @@ extractSwissStamp <- function(trade= ytdTrades) {
     
     setkey(db, ClientId, TradeDate)
     
+    db[, cliNbr:= length(ClientId), by= c("OrderTime","Description")]
+    
     # sort timbre
-    #setorder(db,OrderTime, Description, -ClientId)
+    setorder(db,OrderTime, Description, -ClientId)
     
     return(db)
     

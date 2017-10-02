@@ -112,11 +112,20 @@ clientNav[is.na(InOut), InOut:= 0]
 clientNav[is.na(Fee),   Fee:=   0]
 
 # adjust Nav by accounting fees on correct dates
-clientNav[, aNav:= calcAdjNav(NAV)]
+#clientNav[, aNav:= calcAdjNav(NAV)]
+
+db <- calcAdjNav(NAV)
+clientNav <- db[clientNav]
+clientNav[, aNav:=aNav+ cFee]
+
+#clientNav[, Perf:= ((aNav + cFee) / shift(aNav)) - 1, by= ClientId]
+#clientNav[is.na(Perf), Perf:= 0]
 
 # calc HighWaterMark
-clientNav[, Hwm:=  calcHwm(aNav), 
-          by= ClientId]
+clientNav[, Q:= quarter(TradeDate)]
+clientNav[, Hwm:=  shift(aNav- cFee), by= c("ClientId")]
+clientNav[is.na(Hwm), Hwm:= aNav]
+clientNav[, Hwm:= cummax(Hwm), by= c("Q", "ClientId")]
 
 # calc Performance fee
 clientNav[aNav >  Hwm, pFee:= (aNav - Hwm) * perfFee / 100, 
@@ -125,6 +134,7 @@ clientNav[aNav >  Hwm, pFee:= (aNav - Hwm) * perfFee / 100,
 clientNav[aNav <= Hwm, pFee:=0, 
           by= ClientId]                         # 0 if lower than Hwm
 
+clientNav$pFee[1] <- 0
 clientNav[, pFee:= cumsum(pFee),
           by= ClientId]
 
@@ -195,7 +205,7 @@ clientNav[, .(TradeDate, NAV, aNav, Gross, cNet,
 clientNav[, .SD[.N], by= ClientId,
           .SDcols= c("pFee", "aFee", "Vat", "TF")]
 
-clientNav[TradeDate %in% as.Date(c("2017-03-31", "2017-06-30")), .SD, by= ClientId]
+clientNav[TradeDate %in% as.Date(c("2016-12-30", "2017-03-31", "2017-06-30", "2017-09-29")), .SD, by= ClientId]
 
 ####
 ############ END OF TEST AND DEBUG ZONE

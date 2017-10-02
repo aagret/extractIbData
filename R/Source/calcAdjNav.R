@@ -20,7 +20,14 @@ calcAdjNav <- function(db= clientNav) {
     db[, aNav:= NAV ]
     db[TradeDate < PayDate & TradeDate >= Qq, aNav:= aNav - QFee, by= ClientId]
     
-    return(db$aNav)
+    db[TradeDate == Qq, cFee:= QFee, by= ClientId]
+    db[TradeDate != Qq, cFee:= 0, by= ClientId]
+    
+    db[is.na(cFee), cFee:=0]
+    
+    db <- db[, .(ClientId, TradeDate, aNav, cFee)]
+    
+    return(db)
     
 }
     

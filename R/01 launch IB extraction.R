@@ -116,25 +116,22 @@ clientNav[is.na(Fee),   Fee:=   0]
 
 db <- calcAdjNav(NAV)
 clientNav <- db[clientNav]
-clientNav[, aNav:=aNav+ cFee]
+clientNav[, aNav:=aNav + cFee]
 
-#clientNav[, Perf:= ((aNav + cFee) / shift(aNav)) - 1, by= ClientId]
-#clientNav[is.na(Perf), Perf:= 0]
-
-# calc HighWaterMark
+# group by quarter
 clientNav[, Q:= quarter(TradeDate)]
+
+# calc High Water Mark
 clientNav[, Hwm:=  shift(aNav- cFee), by= c("ClientId")]
 clientNav[is.na(Hwm), Hwm:= aNav]
 clientNav[, Hwm:= cummax(Hwm), by= c("Q", "ClientId")]
 
-# calc Performance fee
+# calc Performance fee (estimated and Real end Quarter)
 clientNav[aNav >  Hwm, pFee:= (aNav - Hwm) * perfFee / 100, 
-          by= ClientId]
+          by= c("ClientId", "Q")]
 
-clientNav[aNav <= Hwm, pFee:=0, 
-          by= ClientId]                         # 0 if lower than Hwm
+clientNav[aNav <= Hwm, pFee:=0, ]                         # 0 if lower than Hwm
 
-clientNav$pFee[1] <- 0
 clientNav[, pFee:= cumsum(pFee),
           by= ClientId]
 
@@ -144,6 +141,8 @@ clientNav[, aFee:= cumsum(c(0, diff(TradeDate)) * aNav * advFee / 36500),
 
 # calc Vat on Fees (for CH clients only)
 clientNav[, Vat:= (pFee + aFee) * 8 / 100]
+
+
 
 
 #######################
@@ -183,6 +182,17 @@ clientNav[, cNet:= Gross - pFee - aFee - Vat - TF, by= ClientId]
 ################################################################################
 ############ TEST AND DEBUG ZONE
 ####
+
+
+# group by quarter
+clientNav[, Q:= quarter(TradeDate)]
+
+clientNav[TradeDate > as.Date("2016-12-31") & 
+              TradeDate <= as.Date("2017-09-29"), 
+          .((aNav[.N] - Hwm[1]) * perfFee / 100,
+            (aNav[1] + aNav[.N]) /2 * advFee * 3 / 1200), 
+          by= c("ClientId", "Q")]
+
 
 
 cli <- "U2202020" # U1427234"

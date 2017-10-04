@@ -23,3 +23,5 @@ TF <- TF[, .(opNbr, TradeDate, Buy.Sell, Currency, abs(Quantity),
 save(TF, file="TF.RData")
 
 
+
+

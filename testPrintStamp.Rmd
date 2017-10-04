@@ -1,31 +1,43 @@
 ---
-title: "test print stamp"
-output: html_document
+title: "Registre du Timbre Fédéral de négociation"
+output:
+  pdf_document: default
+  html_document: default
+classoption: landscape
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+\begin{flushleft}
+Artha Finance Suisse SA
+    \begin{center}
+    transaction list
+    \end{center}
+\end{flushleft}
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+```{r xtable, results="asis", echo=FALSE}
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r xtable, results="asis"}
 load("TF.RData")
 library(xtable)
-tab <- xtable(TF[1:10])
-print(tab, type="html")
+
+colnames(TF)[1] <- "#"
+tab1 <- xtable(TF[1:30,], 
+              digits= c(0,0,0,0,0,0,0,2,0,0,0,0),
+              align=  c("c|c||lccrlrl||r|r||r|"))
+
+tab2 <- xtable(TF[31:60,], 
+              digits=c(0,0,0,0,0,0,0,2,0,0,0,0),
+              c("cclccrlrlrrr"))
+
+print(tab1, type="latex", comment= FALSE, caption.width="p{3}",
+      include.rownames= FALSE, scalebox= 0.9,
+      hline.after= c(-1, 0, seq(2, nrow(tab1), by=2)))
+
+print(tab2, type="latex", comment= FALSE,
+      include.rownames= FALSE, scalebox= 0.9,
+      hline.after= c(-1, 1, seq(2, nrow(tab2), by=2)))
+
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

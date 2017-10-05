@@ -12,10 +12,20 @@ knitr::opts_chunk$set(echo = TRUE)
 
 \begin{flushleft}
 Artha Finance Suisse SA
-    \begin{center}
-    transaction list
-    \end{center}
-\end{flushleft}
+\begin{flushfight}
+Interactive Brokers UK Ltd  
+\end{flushright}
+\end{flushright}
+
+
+```{r, echo= FALSE}
+dt <- strftime(Sys.Date(), format="%d %B %Y")
+```
+
+\begin{flushright}
+$`r dt`$
+\end{flushright}
+
 
 ```{r xtable, results="asis", echo=FALSE}
 

@@ -10,22 +10,14 @@ classoption: landscape
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-\begin{flushleft}
 Artha Finance Suisse SA
-\begin{flushfight}
+\hspace{422pt}
 Interactive Brokers UK Ltd  
-\end{flushright}
-\end{flushright}
 
-
-```{r, echo= FALSE}
-dt <- strftime(Sys.Date(), format="%d %B %Y")
-```
 
 \begin{flushright}
-$`r dt`$
+`r format(Sys.Date(), "%e %B %Y")`
 \end{flushright}
-
 
 ```{r xtable, results="asis", echo=FALSE}
 
@@ -33,21 +25,14 @@ load("TF.RData")
 library(xtable)
 
 colnames(TF)[1] <- "#"
-tab1 <- xtable(TF[1:30,], 
+tab <- xtable(TF[1:30,], 
               digits= c(0,0,0,0,0,0,0,2,0,0,0,0),
               align=  c("c|c||lccrlrl||r|r||r|"))
 
-tab2 <- xtable(TF[31:60,], 
-              digits=c(0,0,0,0,0,0,0,2,0,0,0,0),
-              c("cclccrlrlrrr"))
-
-print(tab1, type="latex", comment= FALSE, caption.width="p{3}",
+print(tab, type="latex", comment= FALSE, caption.width="p{30}",
       include.rownames= FALSE, scalebox= 0.9,
-      hline.after= c(-1, 0, seq(2, nrow(tab1), by=2)))
+      hline.after= c(-1, 0, seq(2, nrow(tab), by=2)))
 
-print(tab2, type="latex", comment= FALSE,
-      include.rownames= FALSE, scalebox= 0.9,
-      hline.after= c(-1, 1, seq(2, nrow(tab2), by=2)))
 
 ```
 

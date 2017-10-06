@@ -4,14 +4,18 @@ output:
   pdf_document: default
   html_document: default
 classoption: landscape
+header-includes:
+     - \usepackage{longtable}
+geometry: margin=0.7cm
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
 ```
 
 Artha Finance Suisse SA
-\hspace{422pt}
+\hspace{519pt}
 Interactive Brokers UK Ltd  
 
 
@@ -19,20 +23,85 @@ Interactive Brokers UK Ltd
 `r format(Sys.Date(), "%e %B %Y")`
 \end{flushright}
 
-```{r xtable, results="asis", echo=FALSE}
+```{r analysys, echo= FALSE, include= FALSE}
+
+library(data.table)
 
 load("TF.RData")
+
+idx <- TF[, .N, by=opNbr]
+idx[, N:= cumsum(N)]
+idx[, N:= as.integer(N / 40) + 1]
+
+idx <- idx[TF, on= "opNbr"]
+
+colnames(idx)[1] <- "#"
+idx[, TradeDate:= as.character(as.Date(TradeDate), "%e %B %Y")]
+
+```
+
+
+```{r xtable, results="asis", echo=FALSE}
+
 library(xtable)
 
-colnames(TF)[1] <- "#"
-tab <- xtable(TF[1:30,], 
-              digits= c(0,0,0,0,0,0,0,2,0,0,0,0),
-              align=  c("c|c||lccrlrl||r|r||r|"))
+#for (i in 1:unique(idx$N)) {
 
-print(tab, type="latex", comment= FALSE, caption.width="p{30}",
-      include.rownames= FALSE, scalebox= 0.9,
-      hline.after= c(-1, 0, seq(2, nrow(tab), by=2)))
+idx <- idx[1:40, ]
+tot <- idx[1,]
 
+tot[,  ':=' ('#'= "", "N"= "", TradeDate= "", Buy.Sell= "", Currency= "",
+             V5= "", Description= "", TradePrice= "", ClientId= "",
+             SoumisSuisse= "", SoumisEtr= "", NonSoumis="")]
+
+tot <- rbind(tot, tot, tot, tot, tot, tot)
+
+tot[3, ':=' (ClientId= "Total :",
+             SoumisSuisse= sum(tab$SoumisSuisse),
+             SoumisEtr= sum(tab$SoumisEtr),
+             NonSoumis= sum(tab$NonSoumis))]
+
+tot[, lapply(.SD, as.numeric), .SDcols= c("SoumisSuisse", "SoumisEtr", "NonSoumis")]
+
+    tab1 <- xtable(idx[, -2],  
+                  digits= c(0,0,0,0,0,0,0,2,0,0,0,0),
+                  align=  c("c|c||lccrlrl||r|r||r|")) #N ==  i
+
+    tab2 <- xtable(tot[, -2],  
+                  digits= c(0,0,0,0,0,0,0,2,0,0,0,0),
+                  align=  c("c|c||lccrlrl||r|r||r|")) #N ==  i
+
+    tab <- rbind(tab1, tab2)
+    
+tab <- rbind(idx, tot)
+
+
+    sizeNew = paste0("\\fontsize{", 9.1,"pt}{", 9.1 + 1, "pt}\\selectfont") 
+      
+    tab <- xtable(idx[1:40, -2],  
+                  digits= c(0,0,0,0,0,0,0,2,0,0,0,0),
+                  align=  c("c|c||lccrlrl||r|r||r|")) #N ==  i
+
+
+
+    
+
+    
+    tot[3, SoumisSuisse:= sum(idx$SoumisSuisse) ]
+    
+    print(tab, tabular.environment='longtable', floating= FALSE,
+          include.colnames=TRUE, include.rownames= FALSE,
+          size= sizeNew, flaoting=FALSE, comment= FALSE,
+          hline.after= c(-1, 0, seq(2, nrow(tab), by=2)),
+          add.to.row= list(pos= list(0), command= "\\hline  \\endhead"))
+    
+    
+    
+    
+  #  print(tab, type="latex", comment= FALSE, caption.width="p{30}",
+  #        include.rownames= FALSE, scalebox= 0.9,
+  #        hline.after= c(-1, 0, seq(2, nrow(tab), by=2)))
+#}
 
 ```
 

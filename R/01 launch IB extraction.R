@@ -217,6 +217,7 @@ clientNav[, .SD[.N], by= ClientId,
 
 clientNav[TradeDate %in% as.Date(c("2016-12-30", "2017-03-31", "2017-06-30", "2017-09-29")), .SD, by= ClientId]
 
+
 ####
 ############ END OF TEST AND DEBUG ZONE
 ################################################################################

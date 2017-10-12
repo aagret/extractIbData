@@ -9,11 +9,27 @@ extractSwissStamp <- function(trade= ytdTrades) {
     # extract Timbre datas
     db <- trade[TradeDate >= qDts[1] &  AssetClass =="STK",
                 .(OrderTime,
-                  Description, Conid,
+                  Description, Symbol, ISIN,
                   TradeDate, Currency,  
                   Buy.Sell, Quantity, TradePrice, 
                   Proceeds, ClientId, Fx)]
     
+    tickers <- fread ("/home/artha/Alexandre/Tfc/ticker4.csv")
+    tickers <- tickers[,c(3,2)]
+    colnames(tickers) <- c("Symbol", "ISIN")
+   
+    db2 <- db[ISIN == "",][, Symbol:= paste0(Symbol, " US Equity")]
+    
+    db1 <- db[ISIN != "",]
+    
+    setkey(tickers, Symbol)
+    setkey(db2, Symbol)
+    
+    db2  <- tickers[db2][,-5, with=FALSE]
+    
+    db <- rbind(db1, db2)
+    
+    # calc stamp amount
     db[Currency ==  "CHF", ":=" (SoumisSuisse= round(Proceeds * Fx, 0),
                                  SoumisEtr= 0,
                                  NonSoumis= 0)]
@@ -26,14 +42,18 @@ extractSwissStamp <- function(trade= ytdTrades) {
     
     db[, Buy.Sell:= ifelse(Buy.Sell=="BUY", "ACH", "VTE")]
     
-    # generate IB datas
+    # generate IB contrepartie datas
     ibTimbre <- db[, lapply(.SD, sum, na.rm=TRUE), 
                    by= c("OrderTime", "Description"),
-                   .SDcols= c(7, 9, 12, 13, 14)]
+                   .SDcols= c("Quantity", "Proceeds",
+                              "SoumisSuisse", "SoumisEtr",
+                              "NonSoumis")]
     
     ibTrades <- db[, head(.SD,1), 
                    by= c("OrderTime", "Description"), 
-                   .SDcols= -c(7, 9, 12, 13, 14)]
+                   .SDcols= -c("Quantity", "Proceeds",
+                               "SoumisSuisse", "SoumisEtr",
+                               "NonSoumis")]
     
     setkey(ibTrades, OrderTime, Description)
     setkey(ibTimbre, OrderTime, Description)
@@ -52,6 +72,12 @@ extractSwissStamp <- function(trade= ytdTrades) {
     setkey(db, ClientId, TradeDate)
     
     db[, cliNbr:= length(ClientId), by= c("OrderTime","Description")]
+    db[, Op:= rownames(db)]
+    
+    # order columns
+    setcolorder(db, c(1, 16, 3, 17, 5, 7, 
+                      8, 2, 4, 9, 6, 
+                      12, 11, 10, 13, 14, 15))
     
     # sort timbre
     setorder(db,OrderTime, Description, -ClientId)

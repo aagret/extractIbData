@@ -29,6 +29,8 @@ extractSwissStamp <- function(trade= ytdTrades) {
     
     db <- rbind(db1, db2)
     
+    setkey(db, OrderTime, Description, ClientId)
+    
     # calc stamp amount
     db[Currency ==  "CHF", ":=" (SoumisSuisse= round(Proceeds * Fx, 0),
                                  SoumisEtr= 0,
@@ -38,8 +40,9 @@ extractSwissStamp <- function(trade= ytdTrades) {
                                  SoumisEtr= round(Proceeds * Fx, 0),
                                  NonSoumis= 0)]
     
-    db[, TradePrice:= round(TradePrice, 3)]
     
+    db[, Quantity:= abs(Quantity)]
+    db[, TradePrice:= round(TradePrice, 3)]
     db[, Buy.Sell:= ifelse(Buy.Sell=="BUY", "ACH", "VTE")]
     
     # generate IB contrepartie datas
@@ -56,7 +59,6 @@ extractSwissStamp <- function(trade= ytdTrades) {
                                "NonSoumis")]
     
     setkey(ibTrades, OrderTime, Description)
-    setkey(ibTimbre, OrderTime, Description)
     
     ibTimbre <- ibTimbre[ibTrades]
     
@@ -69,20 +71,20 @@ extractSwissStamp <- function(trade= ytdTrades) {
     
     db <- rbind(db, ibTimbre)
     
-    setkey(db, ClientId, TradeDate)
+    # sort timbre
+    setorder(db, OrderTime, Description, -ClientId)
+    #setkey(db, ClientId, TradeDate)
     
     db[, cliNbr:= length(ClientId), by= c("OrderTime","Description")]
-    db[, Op:= rownames(db)]
+
+    
     
     # order columns
-    setcolorder(db, c(1, 16, 3, 17, 5, 7, 
-                      8, 2, 4, 9, 6, 
-                      12, 11, 10, 13, 14, 15))
+    setcolorder(db, c(1, 16, 3, 4, 5, 7, 
+                      8, 2, 9, 6, 12,
+                      11, 10, 13, 14, 15))
     
-    # sort timbre
-    setorder(db,OrderTime, Description, -ClientId)
-    setkey(db, ClientId, TradeDate)
-    
+
     return(db)
     
 }

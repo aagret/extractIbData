@@ -151,6 +151,7 @@ clientNav[, Vat:= (pFee + aFee) * 8 / 100]
 
 # extract Swiss Stamp from trade list
 timbre <- extractSwissStamp(ytdTrades)
+fwrite(timbre, "ibTimbre.csv")
 
 # calc total stamp per client and merge with clientNav
 clientNav <- timbre[, calcStamp(timbre)][clientNav]

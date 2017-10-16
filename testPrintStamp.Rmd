@@ -33,7 +33,7 @@ setorder(TF, OrderTime, Description, -ClientId)
 
 TF[, Dom:= ifelse(grepl("Interactive", ClientId), "ETR", "CH")]
 TF[, opNbr:= .GRP, by=c("OrderTime", "Description")] 
-TF[, Grp:= opNbr %/% 14]
+TF[, Grp:= opNbr %/% 17]
 #TF[, .N, by= "Grp"]
 
 TF <- TF[, c("Grp", "opNbr", "TradeDate", "Buy.Sell", "Quantity",
@@ -70,11 +70,15 @@ tot <- rbind(tot, droits)
 library(xtable)
 
 
-g <- 0
+g <- 10
     
 #for (g in unique(TF$Grp)) {
-    tab1 <- xtable(TF[Grp == g, -1])
-    tab2 <- xtable(tot[Grp== g, -1])
+    tab1 <- xtable(TF[Grp == g, -1],
+                   digits= c(0, 0, 0, 0, 0,0,0,3,0,4,0,0,0,0,0))
+    
+    tab2 <- xtable(tot[Grp== g, -1],
+                   digits= c(0, 0, 0, 0))
+    
     tab <- list(tab1, tab2)
 #    data <- rbind(TF[Grp == g, ], tot[Grp== g, ])
     #    tab <-  xtable(data)
@@ -82,7 +86,7 @@ g <- 0
             xtable.caption.width="p{30}",
             xtable.include.rownames= FALSE, 
             xtable.scalebox= 0.8)
-    print(tab, comment= FALSE)
+    print(tab)
     
 #    }
 # 

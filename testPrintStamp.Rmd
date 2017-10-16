@@ -28,15 +28,39 @@ Interactive Brokers UK Ltd
 library(data.table)
 
 load("TF.RData")
+#setkey(TF, OrderTime, Description)
+setorder(TF, OrderTime, Description, -ClientId)
 
-idx <- TF[, .N, by=opNbr]
-idx[, N:= cumsum(N)]
-idx[, N:= as.integer(N / 40) + 1]
+TF[, Dom:= ifelse(grepl("Interactive", ClientId), "ETR", "CH")]
+TF[, opNbr:= .GRP, by=c("OrderTime", "Description")] 
+TF[, Grp:= opNbr %/% 14]
+#TF[, .N, by= "Grp"]
 
-idx <- idx[TF, on= "opNbr"]
+TF <- TF[, c("Grp", "opNbr", "TradeDate", "Buy.Sell", "Quantity",
+             "Description", "ISIN", "TradePrice", "Currency", "Fx",
+             "ClientId", "Dom", "SoumisSuisse", "SoumisEtr", "NonSoumis")]
 
-colnames(idx)[1] <- "#"
-idx[, TradeDate:= as.character(as.Date(TradeDate), "%e %B %Y")]
+
+tot <- TF[, lapply(.SD, sum), by= "Grp",
+          .SDcols= c("SoumisSuisse", "SoumisEtr",
+                     "NonSoumis")]
+
+#tot[, ':=' (opNbr=NA, TradeDate= NA, Buy.Sell ="", Quantity= NA,
+#            Description= "", ISIN="", TradePrice=NA, Currency= "", Fx=NA,
+#            ClientId= "Contre valeur totale", Dom="")]
+
+droits <- tot[, .(SoumisSuisse * 0.075 / 100,
+                SoumisEtr * 0.15 / 100,
+                0), by= "Grp"]
+colnames(droits) <- colnames(tot)
+
+#droits[, ':=' (opNbr=NA, TradeDate= NA, Buy.Sell ="", Quantity= NA,
+#            Description= "", ISIN="", TradePrice=NA, Currency= "", Fx=NA,
+#            ClientId= "Droits négociation dus", Dom="")]
+
+tot <- rbind(tot, droits)
+#setcolorder(tot, c(colnames(TF)))
+
 
 ```
 
@@ -45,58 +69,84 @@ idx[, TradeDate:= as.character(as.Date(TradeDate), "%e %B %Y")]
 
 library(xtable)
 
-#for (i in 1:unique(idx$N)) {
 
-idx <- idx[1:40, ]
-tot <- idx[1,]
-
-tot[,  ':=' ('#'= "", "N"= "", TradeDate= "", Buy.Sell= "", Currency= "",
-             V5= "", Description= "", TradePrice= "", ClientId= "",
-             SoumisSuisse= "", SoumisEtr= "", NonSoumis="")]
-
-tot <- rbind(tot, tot, tot, tot, tot, tot)
-
-tot[3, ':=' (ClientId= "Total :",
-             SoumisSuisse= sum(tab$SoumisSuisse),
-             SoumisEtr= sum(tab$SoumisEtr),
-             NonSoumis= sum(tab$NonSoumis))]
-
-tot[, lapply(.SD, as.numeric), .SDcols= c("SoumisSuisse", "SoumisEtr", "NonSoumis")]
-
-    tab1 <- xtable(idx[, -2],  
-                  digits= c(0,0,0,0,0,0,0,2,0,0,0,0),
-                  align=  c("c|c||lccrlrl||r|r||r|")) #N ==  i
-
-    tab2 <- xtable(tot[, -2],  
-                  digits= c(0,0,0,0,0,0,0,2,0,0,0,0),
-                  align=  c("c|c||lccrlrl||r|r||r|")) #N ==  i
-
-    tab <- rbind(tab1, tab2)
+g <- 0
     
-tab <- rbind(idx, tot)
-
-
-    sizeNew = paste0("\\fontsize{", 9.1,"pt}{", 9.1 + 1, "pt}\\selectfont") 
-      
-    tab <- xtable(idx[1:40, -2],  
-                  digits= c(0,0,0,0,0,0,0,2,0,0,0,0),
-                  align=  c("c|c||lccrlrl||r|r||r|")) #N ==  i
-
-
-
+#for (g in unique(TF$Grp)) {
+    tab1 <- xtable(TF[Grp == g, -1])
+    tab2 <- xtable(tot[Grp== g, -1])
+    tab <- list(tab1, tab2)
+#    data <- rbind(TF[Grp == g, ], tot[Grp== g, ])
+    #    tab <-  xtable(data)
+    options(xtable.comment = FALSE, 
+            xtable.caption.width="p{30}",
+            xtable.include.rownames= FALSE, 
+            xtable.scalebox= 0.8)
+    print(tab, comment= FALSE)
     
+#    }
+# 
 
-    
-    tot[3, SoumisSuisse:= sum(idx$SoumisSuisse) ]
-    
-    print(tab, tabular.environment='longtable', floating= FALSE,
-          include.colnames=TRUE, include.rownames= FALSE,
-          size= sizeNew, flaoting=FALSE, comment= FALSE,
-          hline.after= c(-1, 0, seq(2, nrow(tab), by=2)),
-          add.to.row= list(pos= list(0), command= "\\hline  \\endhead"))
-    
-    
-    
+# 
+#    print(tab[g], type="latex", comment= FALSE, caption.width="p{30}",
+#          include.rownames= FALSE, scalebox= 0.9,
+#          hline.after= c(-1, 0, seq(2, nrow(tab), by=2)))
+# 
+#     
+# 
+# 
+# #for (i in 1:unique(idx$N)) {
+# 
+# idx <- idx[1:40, ]
+# tot <- idx[1,]
+# 
+# tot[,  ':=' ('#'= "", "N"= "", TradeDate= "", Buy.Sell= "", Currency= "",
+#              V5= "", Description= "", TradePrice= "", ClientId= "",
+#              SoumisSuisse= "", SoumisEtr= "", NonSoumis="")]
+# 
+# tot <- rbind(tot, tot, tot, tot, tot, tot)
+# 
+# tot[3, ':=' (ClientId= "Total :",
+#              SoumisSuisse= sum(tab$SoumisSuisse),
+#              SoumisEtr= sum(tab$SoumisEtr),
+#              NonSoumis= sum(tab$NonSoumis))]
+# 
+# tot[, lapply(.SD, as.numeric), .SDcols= c("SoumisSuisse", "SoumisEtr", "NonSoumis")]
+# 
+#     tab1 <- xtable(idx[, -2],  
+#                   digits= c(0,0,0,0,0,0,0,2,0,0,0,0),
+#                   align=  c("c|c||lccrlrl||r|r||r|")) #N ==  i
+# 
+#     tab2 <- xtable(tot[, -2],  
+#                   digits= c(0,0,0,0,0,0,0,2,0,0,0,0),
+#                   align=  c("c|c||lccrlrl||r|r||r|")) #N ==  i
+# 
+#     tab <- rbind(tab1, tab2)
+#     
+# tab <- rbind(idx, tot)
+# 
+# 
+#     sizeNew = paste0("\\fontsize{", 9.1,"pt}{", 9.1 + 1, "pt}\\selectfont") 
+#       
+#     tab <- xtable(idx[1:40, -2],  
+#                   digits= c(0,0,0,0,0,0,0,2,0,0,0,0),
+#                   align=  c("c|c||lccrlrl||r|r||r|")) #N ==  i
+# 
+# 
+# 
+#     
+# 
+#     
+#     tot[3, SoumisSuisse:= sum(idx$SoumisSuisse) ]
+#     
+#     print(tab, tabular.environment='longtable', floating= FALSE,
+#           include.colnames=TRUE, include.rownames= FALSE,
+#           size= sizeNew, flaoting=FALSE, comment= FALSE,
+#           hline.after= c(-1, 0, seq(2, nrow(tab), by=2)),
+#           add.to.row= list(pos= list(0), command= "\\hline  \\endhead"))
+#     
+#     
+#     
     
   #  print(tab, type="latex", comment= FALSE, caption.width="p{30}",
   #        include.rownames= FALSE, scalebox= 0.9,

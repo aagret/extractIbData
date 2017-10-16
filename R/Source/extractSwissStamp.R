@@ -14,7 +14,8 @@ extractSwissStamp <- function(trade= ytdTrades) {
                   Buy.Sell, Quantity, TradePrice, 
                   Proceeds, ClientId, Fx)]
     
-    tickers <- fread ("/home/artha/Alexandre/Tfc/ticker4.csv")
+    #tickers <- fread ("/home/artha/Alexandre/Tfc/ticker4.csv")
+    tickers <- fread ("U:/Tfc/ticker4.csv")
     tickers <- tickers[,c(3,2)]
     colnames(tickers) <- c("Symbol", "ISIN")
    
@@ -73,9 +74,9 @@ extractSwissStamp <- function(trade= ytdTrades) {
     
     # sort timbre
     setorder(db, OrderTime, Description, -ClientId)
-    #setkey(db, ClientId, TradeDate)
     
-    db[, cliNbr:= length(ClientId), by= c("OrderTime","Description")]
+    
+    db[, cliNbr:= .N, by= c("OrderTime","Description")]
 
     
     
@@ -83,6 +84,8 @@ extractSwissStamp <- function(trade= ytdTrades) {
     setcolorder(db, c(1, 16, 3, 4, 5, 7, 
                       8, 2, 9, 6, 12,
                       11, 10, 13, 14, 15))
+    
+    setkey(db, ClientId, TradeDate)
     
 
     return(db)

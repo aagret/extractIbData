@@ -71,22 +71,34 @@ library(xtable)
 
 
 g <- 10
-    
+
+TF[TF==0,]  <- NA
+# tot[tot==0] <- NA
+
 #for (g in unique(TF$Grp)) {
-    tab1 <- xtable(TF[Grp == g, -1],
-                   digits= c(0, 0, 0, 0, 0,0,0,3,0,4,0,0,0,0,0))
-    
-    tab2 <- xtable(tot[Grp== g, -1],
-                   digits= c(0, 0, 0, 0))
-    
-    tab <- list(tab1, tab2)
-#    data <- rbind(TF[Grp == g, ], tot[Grp== g, ])
-    #    tab <-  xtable(data)
-    options(xtable.comment = FALSE, 
-            xtable.caption.width="p{30}",
-            xtable.include.rownames= FALSE, 
-            xtable.scalebox= 0.8)
-    print(tab)
+tab1 <- xtable(TF[Grp == g, -1][, 
+                                TradeDate:= as.character(
+                                    strftime(TradeDate, 
+                                             format= "%d-%m-%Y"))],
+               NA.string= '',
+               digits= c(0, 0, 0, 0, 0, 0, 0, 3, 0, 4, 0, 0, 0, 0, 0))
+ 
+tab2 <- xtable(tot[Grp== g, -1],
+               NA.string= '',
+               digits= c(0, 0, 0, 0))
+
+
+tab <-list(tab1, tab2)
+
+options(xtable.comment = FALSE, 
+        xtable.caption.width="p{30}",
+        xtable.include.rownames= FALSE, 
+        xtable.scalebox= 0.8,
+        xtable.format.args = list(big.mark = "'"))
+
+print(tab, type="latex",
+      hline.after= c(-1, 0, TF[Grp == 10,][grepl("Interacti", ClientId), which= TRUE]))
+
     
 #    }
 # 
@@ -97,23 +109,6 @@ g <- 10
 #          hline.after= c(-1, 0, seq(2, nrow(tab), by=2)))
 # 
 #     
-# 
-# 
-# #for (i in 1:unique(idx$N)) {
-# 
-# idx <- idx[1:40, ]
-# tot <- idx[1,]
-# 
-# tot[,  ':=' ('#'= "", "N"= "", TradeDate= "", Buy.Sell= "", Currency= "",
-#              V5= "", Description= "", TradePrice= "", ClientId= "",
-#              SoumisSuisse= "", SoumisEtr= "", NonSoumis="")]
-# 
-# tot <- rbind(tot, tot, tot, tot, tot, tot)
-# 
-# tot[3, ':=' (ClientId= "Total :",
-#              SoumisSuisse= sum(tab$SoumisSuisse),
-#              SoumisEtr= sum(tab$SoumisEtr),
-#              NonSoumis= sum(tab$NonSoumis))]
 # 
 # tot[, lapply(.SD, as.numeric), .SDcols= c("SoumisSuisse", "SoumisEtr", "NonSoumis")]
 # 

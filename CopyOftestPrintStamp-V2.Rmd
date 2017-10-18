@@ -8,7 +8,8 @@ geometry: margin=0.5cm
 header-includes:
     \usepackage{fancyhdr}
     \pagestyle{fancy}
-    \lhead{Artha Finance SA}
+    #\usepackage{booktabs}
+    # \lhead{Artha Finance SA}
      # \chead{\textbf{Registre des Negociations}}
      # \rhead{Interactive Brokers (U.K.) Limited}
      # \lfoot{}
@@ -17,74 +18,81 @@ header-includes:
 
 
 output: pdf_document
+
 ---
 
 ```{r setup, include=FALSE}
+
 knitr::opts_chunk$set(echo = TRUE)
 
 ```
 
-<!-- Artha Finance Suisse SA -->
-<!-- \hspace{519pt} -->
-<!-- Interactive Brokers UK Ltd   -->
 
 
-<!-- \begin{flushright} -->
-<!-- `r format(Sys.Date(), "%e %B %Y")` -->
-<!-- \end{flushright} -->
-
-
-```{r analysys, echo= FALSE, include= FALSE}
+```{r analysis, echo= FALSE, include= FALSE}
 
 library(data.table)
 
 load("TF.RData")
-#setkey(TF, OrderTime, Description)
-setorder(TF, OrderTime, Description, -ClientId)
 
-TF[, Dom:= ifelse(grepl("Interactive", ClientId), "ETR", "CH")]
-TF[, opNbr:= .GRP, by=c("OrderTime", "Description")] 
-#TF[, Grp:= opNbr %/% 17 +1]
+# remove and change column names and reorder columns
+TF[, Symbol:= NULL]
 
-TF[, Grp:= c(cliNbr[1], rep(0,.N - 1L)), by= opNbr]
-TF[, Grp:= cumsum(Grp) %/% 50 + 1]
+colnames(TF) <- c("OrderTime", "cliNbr", "Isin", "Date.Op", "Type", 
+                  "Nominal", "Nom", "Prix", "Dev", "Cours",
+                  "Client", "Proceed", 
+                  "Soumis CH", "Soumis ETR", "Non Soumis")
 
-TF <- TF[, c("Grp", "opNbr", "TradeDate", "Buy.Sell", "Quantity",
-             "Description", "ISIN", "TradePrice", "Currency", "Fx",
-             "ClientId", "Dom", "SoumisSuisse", "SoumisEtr", "NonSoumis")]
+setorder(TF, OrderTime, Nom, -Client)
 
+# add Client Domicile
+TF[, Dom:= ifelse(grepl("Interactive", Client), "ETR", "CH")]
 
-tot <- TF[, lapply(.SD, sum), by= "Grp",
-          .SDcols= c("SoumisSuisse", "SoumisEtr",
-                     "NonSoumis")]
+# add number of operation
+TF[, No:= .GRP, by=c("OrderTime", "Nom")] 
 
-tot[, ':=' (opNbr= 0, TradeDate= Sys.Date(), Buy.Sell ="", Quantity= 0,
-            Description= "", ISIN="", TradePrice= 0, Currency= "", Fx= 0,
-            ClientId= "Contre valeur totale", Dom= "")]
+# group data to fit A4 page
+TF[, Grp:= c(cliNbr[1], rep(0,.N - 1L)), by= No]
+TF[, Grp:= cumsum(Grp) %/% 52 + 1]
 
-droits <- tot[, .(SoumisSuisse * 0.075 / 100,
-                  SoumisEtr * 0.15 / 100,
+# remove some columns
+TF$OrderTime <- TF$cliNbr <- TF$Proceed <- NULL
+TF <- TF[, c("Grp", "No", "Date.Op", "Type", "Nominal",
+             "Nom", "Isin", "Prix", "Dev", "Cours",
+             "Client", "Dom", "Soumis CH", "Soumis ETR", "Non Soumis")]
+
+# calc totals by Group and add empty columns to match TF structure
+tot <- TF[, lapply(.SD, sum, na.rm= TRUE), by= "Grp",
+          .SDcols= c("Soumis CH", "Soumis ETR", "Non Soumis")]
+
+tot[, ':=' ('No'= 0, Date.Op= Sys.Date(), Type= "", 
+            Nominal=  0, Nom= "", Isin= "", Prix= 0, Dev= "", Cours= 0,
+            Client= "Contre valeur totale", Dom= "")]
+
+# calc amounts due
+droits <- tot[, .(`Soumis CH` * 0.075 / 100,
+                  `Soumis ETR` * 0.15 / 100,
                   0), 
               by= "Grp"]
 
-colnames(droits) <- c("Grp", "SoumisSuisse", "SoumisEtr", "NonSoumis")
+colnames(droits) <- c("Grp", "Soumis CH", "Soumis ETR", "Non Soumis")
 
-droits[, ':=' (opNbr= 0, TradeDate= Sys.Date(), Buy.Sell ="", Quantity= 0,
-               Description= "", ISIN="", TradePrice= 0, Currency= "", Fx= 0,
-               ClientId= "Droits négociation dus", Dom= "")]
+droits[, ':=' ('No'= 0, Date.Op= Sys.Date(), Type= "", 
+               Nominal=  0, Nom= "", Isin= "", Prix= 0, Dev= "", Cours= 0,
+               Client= "Droits négociation dus", Dom= "")]
 
 
 setcolorder(droits, colnames(TF))
 setcolorder(tot, colnames(TF))
 
 printData <- do.call(rbind, list(TF, tot, droits))
-printData[grepl("Contre", ClientId), TradeDate:= NA ]
-printData[grepl("Droits", ClientId), TradeDate:= NA ]
+printData[, Date.Op:=  as.character(strftime(Date.Op, "%d-%m-%Y"))]
+
+printData[grepl("Contre", Client), Date.Op:= NA ]
+printData[grepl("Droits", Client), Date.Op:= NA ]
 
 printData[printData == 0, ] <- NA 
 printData <- split(printData, by= "Grp", keep.by= FALSE)
-
-
 
 ```
 
@@ -93,111 +101,100 @@ printData <- split(printData, by= "Grp", keep.by= FALSE)
 
 library(xtable)
 
-tab <- xtableList(printData,
-                  NA.string= '',
-                  digits= c( 0, 0, 0, 0, 0, 0, 0, 3, 0, 4, 0, 0, 2, 2, 2),
-                  
-                  align=  c("l", "||p{1cm}","p{2cm}|",
-                            "p{1cm}","p{1cm]","p{5cm}", "p{3cm}", "p{2cm}|",
-                            "p{1cm}", "p{2cm}||",
-                            "p{4cm}", "p{1cm}||",
-                            "p{2cm}", "p{2cm}|", "p{2cm}||"))
+# tab <- xtableList(printData,
+#                   NA.string= '',
+#                   digits= c( 0, 0, 0, 0, 0, 0, 0, 3, 0, 4, 0, 0, 2, 2, 2),
+#                   align=  c("l||cccrllr|cr|lc||rr|r||"))
 
-                  
-                  # #align= c("l||",
-                  # "L{60}",
-                  # "R{30}|",
-                  # 
-                  # "L{60}",
-                  # "R{30}|",
-                  # 
-                  # "L{60}",
-                  # "R{30}|",
-                  # 
-                  # "L{60}",
-                  # "R{30}|",
-                  # 
-                  # "L{60}",
-                  # "R{30}|",
-                  # 
-                  # "L{60}",
-                  # "R{30}|",
-                  # 
-                  # "L{60}",
-                  # "p{30}|"
-                  
-
+# align=  c("l", "p{1cm}", "p{1cm}",
+#           "p{1cm}", "p{1cm]", "p{1cm}", "p{1cm}", "p{1cm}",
+#           "p{1cm}", "p{1cm}",
+#           "p{1cm}", "p{1cm}",
+#           "p{1cm}", "p{1cm}", "p{1cm}"))
 
 options(xtable.type= "latex",
-        xtable.comment = FALSE, tabular.environment = "longtable",
+        tabular.environment = "longtable",
+        xtable.comment = FALSE,
         xtable.caption.width="p{30}",
         xtable.include.rownames= FALSE,
-        xtable.scalebox= 1,
+        xtable.scalebox= 0.8,
         xtable.format.args = list(big.mark = "'"))
-
 
 bold <- function(x) {paste('{\\textbf{',x,'}}', sep ='')}
 
-# strrep("-", 115)
-for (g in 1:length(tab)) {
-    
-    header <- data.table(matrix(c(strrep("-", 70), 
-                                  "Artha Finance SA", 
+
+for (g in 1:length(printData)) {
+
+    header <- data.table(matrix(c(strrep("-", 97),
+                                  "Artha Finance SA",
                                   "Interactive Brokers (UK) Ltd",
-                                  
+
                                   "REGISTRE DES NEGOCIATIONS",
                                   NA,
                                   NA,
-                                  
-                                  strrep("-", 70),
-                                  as.character(strftime(Sys.Date(), 
+
+                                  strrep("-", 97),
+                                  as.character(strftime(Sys.Date(),
                                                         "%d %B %Y")),
                                   paste("Page: ", g)),
                                 3, 3))
-    
+
 
     print(xtable(header, align=  c("llcr")),
           include.colnames = FALSE,
           hline.after= NULL,
-          sanitize.text.function= bold)
+          sanitize.text.function= bold,
+          table.placement = "t")
+    
+    tab <- xtable(printData[[g]],
+                  NA.string= '',
+                  digits= c( 0, 0, 0, 0, 0, 0, 0, 3, 0, 4, 0, 0, 2, 2, 2),
+                  align=  c("l||cccrllr|cr|lc||rr|r||"))
 
+    lines <- printData[[g]][grepl("Interacti", Client), which= TRUE]
 
-    print.xtable(tab[[g]],
-                 hline.after= c(-1, 0, nrow(tab[[g]]),
-                                printData[[g]][grepl("Interacti",
-                                                     ClientId), which= TRUE]),
-                 sanitize.colnames.function = bold)  # table.placement = "!p")
+    print(tab,
+                 hline.after= c(-1, 0,
+                                lines,
+                                nrow(tab))
+                                
+                                ,sanitize.colnames.function = bold,
+                                #, table.placement = "t"
+    )
+
+#,
+#                             ,
+    #              sanitize.colnames.function = bold)  # table.placement = "!p")
 
 }
 
-
 total  <- tot[, lapply(.SD, sum, na.rm= TRUE),
-              .SDcols= c("SoumisSuisse", "SoumisEtr","NonSoumis")]
+              .SDcols= c("Soumis CH", "Soumis ETR","Non Soumis")]
 
-total[, "Totaux":= "Cumul trimestriel"]
+total[, Totaux:= "Cumul trimestriel"]
 
 du <- droits[, lapply(.SD, sum, na.rm= TRUE),
-             .SDcols= c("SoumisSuisse", "SoumisEtr","NonSoumis")]
+             .SDcols= c("Soumis CH", "Soumis ETR","Non Soumis")]
 
-du[, "Totaux":= "Droits de négociations dûs"]
+du[, Totaux:= "Droits de négociations dûs"]
 
-tab <- rbind(total, du)
-tab <- rbind(tab, tab[1])
-setcolorder(tab, c(4, 1, 2, 3))
+total <- rbind(total, du)
+total <- rbind(total, total[1])
 
-du <- tab[2, round((SoumisSuisse + SoumisEtr) / 0.05) * 0.05]
+setcolorder(total, c(4, 1, 2, 3))
 
-tab[3, ':=' (Totaux= "Total a payer",
-             SoumisSuisse= 0,
-             SoumisEtr=0,
-             NonSoumis= du)]
-    
+du <- total[2, round((`Soumis CH` + `Soumis ETR`) / 0.05) * 0.05]
 
-tab <-xtable(tab,
-             digits= c( 0, 0, 2, 2, 2),
-             align=  c("l||l|rr|r||"))
-             
-print(tab, hline.after= c(-1, 0, nrow(tab) - 1, nrow(tab)),
+total[3, ':=' (Totaux= "Total a payer",
+             `Soumis CH`= 0,
+             `Soumis ETR`= 0,
+             `Non Soumis`= du)]
+
+total <- xtable(total,
+              digits= c( 0, 0, 2, 2, 2),
+              align=  c("l||l|rr|r||"))
+
+print(total, hline.after= c(-1, 0, nrow(total) - 1, nrow(total)),
       sanitize.colnames.function = bold)
 
 

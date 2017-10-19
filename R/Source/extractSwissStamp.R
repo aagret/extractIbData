@@ -33,12 +33,12 @@ extractSwissStamp <- function(trade= ytdTrades) {
     setkey(db, OrderTime, Description, ClientId)
     
     # calc stamp amount
-    db[Currency ==  "CHF", ":=" (SoumisSuisse= round(Proceeds * Fx, 0),
+    db[Currency ==  "CHF", ":=" (SoumisSuisse= Proceeds * Fx, 0),
                                  SoumisEtr= 0,
                                  NonSoumis= 0)]
     
     db[!Currency == "CHF", ":=" (SoumisSuisse= 0,
-                                 SoumisEtr= round(Proceeds * Fx, 0),
+                                 SoumisEtr= Proceeds * Fx, 0),
                                  NonSoumis= 0)]
     
     

@@ -7,9 +7,9 @@ getInOut <- function(tok= token) {
     db    <- getIbReport(reportId, tok)
     
     # format data and remove useless columns
-    db <- db[Activity.Code == "DEP", .(ClientAccountID, Report.Date, Amount)]
+    db <- db[ActivityCode == "DEP", .(ClientAccountID, ReportDate, Amount)]
     
-    db[, ':=' (Report.Date= as.Date(Report.Date, format= "%Y%m%d"), 
+    db[, ':=' (ReportDate= as.Date(ReportDate, format= "%Y%m%d"), 
                Amount= as.numeric(Amount))]
     
     

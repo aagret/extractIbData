@@ -29,7 +29,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 
-```{r analysis, echo= FALSE, include= FALSE}
+```{r tidy data, echo= FALSE, include= FALSE}
 
 library(data.table)
 
@@ -51,9 +51,9 @@ TF[, Dom:= ifelse(grepl("Interactive", Client), "ETR", "CH")]
 # add number of operation
 TF[, No:= .GRP, by=c("OrderTime", "Nom")] 
 
-# group data to fit A4 page
+# group data to fit A4 page ! change %/% to match length
 TF[, Grp:= c(cliNbr[1], rep(0,.N - 1L)), by= No]
-TF[, Grp:= cumsum(Grp) %/% 52 + 1]
+TF[, Grp:= cumsum(Grp) %/% 51 + 1]
 
 # remove some columns
 TF$OrderTime <- TF$cliNbr <- TF$Proceed <- NULL
@@ -65,9 +65,13 @@ TF <- TF[, c("Grp", "No", "Date.Op", "Type", "Nominal",
 tot <- TF[, lapply(.SD, sum, na.rm= TRUE), by= "Grp",
           .SDcols= c("Soumis CH", "Soumis ETR", "Non Soumis")]
 
-tot[, ':=' ('No'= 0, Date.Op= Sys.Date(), Type= "", 
-            Nominal=  0, Nom= "", Isin= "", Prix= 0, Dev= "", Cours= 0,
-            Client= "Contre valeur totale", Dom= "")]
+tot[, ':=' ('No'= NA, Date.Op= Sys.Date(), Type= NA, 
+               Nominal=  NA, Nom= NA, Isin= NA, Prix= NA, Dev= NA, Cours= NA,
+            Client= "Contre valeur totale", Dom= NA)]
+
+# add empty first line for clear printing
+empty <- copy(tot)
+set(empty, i=NULL, j= c(colnames(empty)[c(-1, -6)]), value= NA)
 
 # calc amounts due
 droits <- tot[, .(`Soumis CH` * 0.075 / 100,
@@ -77,22 +81,31 @@ droits <- tot[, .(`Soumis CH` * 0.075 / 100,
 
 colnames(droits) <- c("Grp", "Soumis CH", "Soumis ETR", "Non Soumis")
 
-droits[, ':=' ('No'= 0, Date.Op= Sys.Date(), Type= "", 
-               Nominal=  0, Nom= "", Isin= "", Prix= 0, Dev= "", Cours= 0,
-               Client= "Droits négociation dus", Dom= "")]
+droits[, ':=' ('No'= NA, Date.Op= Sys.Date(), Type= NA, 
+               Nominal=  NA, Nom= NA, Isin= NA, Prix= NA, Dev= NA, Cours= NA,
+               Client= "Droits négociation dus", Dom= NA)]
 
 
 setcolorder(droits, colnames(TF))
 setcolorder(tot, colnames(TF))
+setcolorder(empty, colnames(TF))
 
-printData <- do.call(rbind, list(TF, tot, droits))
+
+printData <- do.call(rbind, list(TF, empty, tot, droits))
 printData[, Date.Op:=  as.character(strftime(Date.Op, "%d-%m-%Y"))]
 
 printData[grepl("Contre", Client), Date.Op:= NA ]
 printData[grepl("Droits", Client), Date.Op:= NA ]
+printData[is.na(Client), Date.Op:= NA ]
 
-printData[printData == 0, ] <- NA 
+printData[!grepl("Interactive", Client), ':=' (No= NA,
+                                               Date.Op= NA,
+                                               Nom= NA,
+                                               Isin= NA)]
+
+#split data per group 
 printData <- split(printData, by= "Grp", keep.by= FALSE)
+
 
 ```
 
@@ -100,17 +113,6 @@ printData <- split(printData, by= "Grp", keep.by= FALSE)
 ```{r xtable, results="asis", echo=FALSE}
 
 library(xtable)
-
-# tab <- xtableList(printData,
-#                   NA.string= '',
-#                   digits= c( 0, 0, 0, 0, 0, 0, 0, 3, 0, 4, 0, 0, 2, 2, 2),
-#                   align=  c("l||cccrllr|cr|lc||rr|r||"))
-
-# align=  c("l", "p{1cm}", "p{1cm}",
-#           "p{1cm}", "p{1cm]", "p{1cm}", "p{1cm}", "p{1cm}",
-#           "p{1cm}", "p{1cm}",
-#           "p{1cm}", "p{1cm}",
-#           "p{1cm}", "p{1cm}", "p{1cm}"))
 
 options(xtable.type= "latex",
         tabular.environment = "longtable",
@@ -149,7 +151,7 @@ for (g in 1:length(printData)) {
     tab <- xtable(printData[[g]],
                   NA.string= '',
                   digits= c( 0, 0, 0, 0, 0, 0, 0, 3, 0, 4, 0, 0, 2, 2, 2),
-                  align=  c("l||cccrllr|cr|lc||rr|r||"))
+                  align=  c("l||cc|crp{6.5cm}p{2.5cm}r|cr|lc||rr|r||"))
 
     lines <- printData[[g]][grepl("Interacti", Client), which= TRUE]
 
@@ -198,5 +200,27 @@ print(total, hline.after= c(-1, 0, nrow(total) - 1, nrow(total)),
       sanitize.colnames.function = bold)
 
 
+# print totals by clients for control
+client <- TF[grepl("U", Client), 
+             .(sum(`Soumis CH` +`Soumis ETR`),
+               sum((`Soumis CH` * 0.075 /100) +
+                       (`Soumis ETR` * 0.15 /100))), 
+             by= Client]
+colnames(client) <- c("Client", "Cumul", "Total")
+
+client <- rbind(client, client[1])
+client[3, ':=' (Client= "Total à payer",
+                Cumul= NA,
+                Total= total[3,4])]
+
+client <- xtable(client,
+              digits= c( 0, 0, 0, 2),
+              align=  c("l||l||r|r||"))
+
+print(client, hline.after= c(-1, 0, nrow(client) - 1, nrow(client)),
+      sanitize.colnames.function = bold)
+
+
 ```
+
 

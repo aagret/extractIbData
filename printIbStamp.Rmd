@@ -33,7 +33,10 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(data.table)
 
-load("TF.RData")
+TF <- fread("ibTimbre.csv")
+TF <- TF[TradeDate > as.Date("2017-06-30") & TradeDate <= as.Date("2017-09-30"),]
+
+#load("TF.RData")
 
 # remove and change column names and reorder columns
 TF[, Symbol:= NULL]
@@ -65,9 +68,9 @@ TF <- TF[, c("Grp", "No", "Date.Op", "Type", "Nominal",
 tot <- TF[, lapply(.SD, sum, na.rm= TRUE), by= "Grp",
           .SDcols= c("Soumis CH", "Soumis ETR", "Non Soumis")]
 
-tot[, ':=' ('No'= NA, Date.Op= Sys.Date(), Type= NA, 
-               Nominal=  NA, Nom= NA, Isin= NA, Prix= NA, Dev= NA, Cours= NA,
-            Client= "Contre valeur totale", Dom= NA)]
+tot[, ':=' ('No'= 0L, Date.Op= "", Type= "", 
+               Nominal=  0L, Nom= "", Isin= "", Prix= 0, Dev= "", Cours= 0,
+            Client= "Contre valeur totale", Dom= "")]
 
 # add empty first line for clear printing
 empty <- copy(tot)
@@ -81,9 +84,9 @@ droits <- tot[, .(`Soumis CH` * 0.075 / 100,
 
 colnames(droits) <- c("Grp", "Soumis CH", "Soumis ETR", "Non Soumis")
 
-droits[, ':=' ('No'= NA, Date.Op= Sys.Date(), Type= NA, 
-               Nominal=  NA, Nom= NA, Isin= NA, Prix= NA, Dev= NA, Cours= NA,
-               Client= "Droits négociation dus", Dom= NA)]
+droits[, ':=' ('No'= 0L, Date.Op= "", Type= "", 
+               Nominal=  0L, Nom= "", Isin= "", Prix= 0, Dev= "", Cours= 0,
+               Client= "Droits négociation dus", Dom= "")]
 
 
 setcolorder(droits, colnames(TF))
@@ -92,7 +95,7 @@ setcolorder(empty, colnames(TF))
 
 
 printData <- do.call(rbind, list(TF, empty, tot, droits))
-printData[, Date.Op:=  as.character(strftime(Date.Op, "%d-%m-%Y"))]
+printData[, Date.Op:=  as.character(strftime(as.Date(Date.Op, "%Y-%m-%d"), "%d-%m-%Y"))]
 
 printData[grepl("Contre", Client), Date.Op:= NA ]
 printData[grepl("Droits", Client), Date.Op:= NA ]
@@ -102,6 +105,8 @@ printData[!grepl("Interactive", Client), ':=' (No= NA,
                                                Date.Op= NA,
                                                Nom= NA,
                                                Isin= NA)]
+# remove zero's
+printData[printData==0] <- NA
 
 #split data per group 
 printData <- split(printData, by= "Grp", keep.by= FALSE)

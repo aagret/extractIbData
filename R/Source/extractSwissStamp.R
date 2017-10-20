@@ -8,7 +8,7 @@ extractSwissStamp <- function(trade= ibTrades) {
     
     # extract Timbre datas
     db <- trade[TradeDate >= quarterDates[1] &  AssetClass =="STK",
-                .(OrderTime,
+                .(OrderTime, AssetClass,
                   Description, Symbol, Isin,
                   TradeDate, Currency,  
                   Buy.Sell, Quantity, TradePrice, 
@@ -16,7 +16,7 @@ extractSwissStamp <- function(trade= ibTrades) {
     
     #tickers <- fread ("/home/artha/Alexandre/Tfc/ticker4.csv")
     tickers <- fread ("U:/Tfc/ticker4.csv") # ! check one line only
-    tickers <- tickers[, c(3,2)]
+    tickers <- tickers[, c(3, 2)]
     colnames(tickers) <- c("Symbol", "Isin")
     
     db2 <- db[Isin == "",][, Symbol:= paste0(Symbol, " US Equity")]
@@ -26,9 +26,9 @@ extractSwissStamp <- function(trade= ibTrades) {
     setkey(tickers, Symbol)
     setkey(db2, Symbol)
     
-    db2  <- tickers[db2][,-5, with=FALSE]
+    db2  <- tickers[db2][,-6, with=FALSE]
     
-    db <- rbind(db1, db2)
+    db <- rbind(db1, db2)[, -4]
     
     setkey(db, OrderTime, Description, ClientId)
     
@@ -76,11 +76,6 @@ extractSwissStamp <- function(trade= ibTrades) {
     setorder(db, OrderTime, Description, -ClientId)
     
     db[, cliNbr:= .N, by= c("OrderTime","Description")]
-    
-    # order columns
-    setcolorder(db, c(1, 16, 3, 4, 5, 7, 
-                      8, 2, 9, 6, 12,
-                      11, 10, 13, 14, 15))
     
     setkey(db, ClientId, TradeDate)
     

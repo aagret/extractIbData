@@ -6,9 +6,9 @@ library(data.table)
 pictet <- fread("pictetTimbre.csv", sep=";")
 
 # remove empty columns
-pictet <- pictet[, which(unlist(lapply(pictet, 
-                                       function(x) !all(is.na(x))))), 
-                 with= FALSE]
+# pictet <- pictet[, which(unlist(lapply(pictet, 
+#                                        function(x) !all(is.na(x))))), 
+#                  with= FALSE]
 
 # keep only usefull columns
 pictet <- pictet[, .(`Trade date`, 
@@ -22,8 +22,9 @@ pictet <- pictet[, .(`Trade date`,
                      `Gross amount in trade currency`,
                      `Financial instrument type`)]
 
-colnames(pictet) <- c("Date.Op", "Type", "Nominal", "Nom", "Isin",
-                      "Prix", "Dev", "Client", "Proceeds", "Instument")
+colnames(pictet) <- c("TradeDate", "Buy.Sell", "Quantity", "Description", 
+                      "Isin", "TradePrice", "Currency", "ClientId", 
+                      "Proceeds", "Instument")
 
 
 # format data

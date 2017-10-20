@@ -20,7 +20,7 @@ getIbReport <- function(id= reportId, tok= ibToken){
     # try until resulting not empty
     options(stringsAsFactors = FALSE)
     
-    for (try in 1:20) {
+    for (try in 1:30) {
         
         db <- read.csv(queryUrl, sep=",", header= TRUE)
         

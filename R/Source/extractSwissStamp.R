@@ -15,8 +15,8 @@ extractSwissStamp <- function(trade= ibTrades) {
                   Proceeds, ClientId, Fx)]
     
     #tickers <- fread ("/home/artha/Alexandre/Tfc/ticker4.csv")
-    tickers <- fread ("U:/Tfc/ticker4.csv") # ! check one line only
-    tickers <- tickers[, c(3, 2)]
+    tickers <- fread ("U:/Tfc/ticker4.csv")[, c(3, 2)]
+    
     colnames(tickers) <- c("Symbol", "Isin")
     
     db2 <- db[Isin == "",][, Symbol:= paste0(Symbol, " US Equity")]
@@ -43,7 +43,7 @@ extractSwissStamp <- function(trade= ibTrades) {
     
     
     db[, Quantity:= abs(Quantity)]
-    db[, TradePrice:= round(TradePrice, 3)]
+#    db[, TradePrice:= round(TradePrice, 3)]
     db[, Buy.Sell:= ifelse(Buy.Sell=="BUY", "ACH", "VTE")]
     
     # generate IB contrepartie datas

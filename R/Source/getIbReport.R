@@ -1,6 +1,6 @@
 
 #function to get specific Ib report
-getIbReport <- function(id= reportId, tok= token){
+getIbReport <- function(id= reportId, tok= ibToken){
     
     # current IB default
     baseUrl     <- "https://gdcdyn.interactivebrokers.com/Universal/servlet/FlexStatementService.SendRequest?t="
@@ -15,12 +15,13 @@ getIbReport <- function(id= reportId, tok= token){
     xmlData <- xmlSApply(xmlData, function(x) xmlSApply(x, xmlValue)) 
     
     # url of requested report
-    queryUrl <- paste0(xmlData[2], "?q=", xmlData[1], "&t=", token, "&", version)
+    queryUrl <- paste0(xmlData[2], "?q=", xmlData[1], "&t=", ibToken, "&", version)
     
     # try until resulting not empty
     options(stringsAsFactors = FALSE)
-    for (try in 1:20) {
     
+    for (try in 1:20) {
+        
         db <- read.csv(queryUrl, sep=",", header= TRUE)
         
         if (!grepl("FlexStatementResponse", colnames(db)[1])) break
@@ -28,6 +29,6 @@ getIbReport <- function(id= reportId, tok= token){
         Sys.sleep(5)
     }
     
-    return(setDT(db))
+    setDT(db)
     
 }

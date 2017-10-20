@@ -1,27 +1,27 @@
 
 # Function to extract Swiss Stamp Data from IB trade list
-extractSwissStamp <- function(trade= ytdTrades) {
-
+extractSwissStamp <- function(trade= ibTrades) {
+    
     # get today's and current quarter Dates
-    #qDts <- quarterDates(Sys.Date())
-    qDts <- as.Date("2016-12-31")
+    #quarterDates <- quarterDates(Sys.Date())
+    quarterDates <- as.Date("2016-12-31")
     
     # extract Timbre datas
-    db <- trade[TradeDate >= qDts[1] &  AssetClass =="STK",
+    db <- trade[TradeDate >= quarterDates[1] &  AssetClass =="STK",
                 .(OrderTime,
-                  Description, Symbol, ISIN,
+                  Description, Symbol, Isin,
                   TradeDate, Currency,  
                   Buy.Sell, Quantity, TradePrice, 
                   Proceeds, ClientId, Fx)]
     
     #tickers <- fread ("/home/artha/Alexandre/Tfc/ticker4.csv")
-    tickers <- fread ("U:/Tfc/ticker4.csv")
-    tickers <- tickers[,c(3,2)]
-    colnames(tickers) <- c("Symbol", "ISIN")
-   
-    db2 <- db[ISIN == "",][, Symbol:= paste0(Symbol, " US Equity")]
+    tickers <- fread ("U:/Tfc/ticker4.csv") # ! check one line only
+    tickers <- tickers[, c(3,2)]
+    colnames(tickers) <- c("Symbol", "Isin")
     
-    db1 <- db[ISIN != "",]
+    db2 <- db[Isin == "",][, Symbol:= paste0(Symbol, " US Equity")]
+    
+    db1 <- db[Isin != "",]
     
     setkey(tickers, Symbol)
     setkey(db2, Symbol)
@@ -59,7 +59,7 @@ extractSwissStamp <- function(trade= ytdTrades) {
                                "SoumisSuisse", "SoumisEtr",
                                "NonSoumis")]
     
-    setkey(ibTrades, OrderTime, Description)
+    # setkey(ibTrades, OrderTime, Description) useless ?
     
     ibTimbre <- ibTimbre[ibTrades]
     
@@ -72,13 +72,10 @@ extractSwissStamp <- function(trade= ytdTrades) {
     
     db <- rbind(db, ibTimbre)
     
-    # sort timbre
+    # sort ibTimbre
     setorder(db, OrderTime, Description, -ClientId)
     
-    
     db[, cliNbr:= .N, by= c("OrderTime","Description")]
-
-    
     
     # order columns
     setcolorder(db, c(1, 16, 3, 4, 5, 7, 
@@ -86,8 +83,5 @@ extractSwissStamp <- function(trade= ytdTrades) {
                       11, 10, 13, 14, 15))
     
     setkey(db, ClientId, TradeDate)
-    
-
-    return(db)
     
 }

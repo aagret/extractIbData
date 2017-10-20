@@ -1,21 +1,21 @@
 
-# function to extract NAV history from IB clients
+# function to extract IbNav history from IB clients
 
-getClientNav <- function(token) {
+getClientNav <- function(tok = ibToken) {
     
-    # extract client NAV
+    # extract client IbNav
     reportId  <- "138916"
-    clientNav <- getIbReport(reportId, token)
     
-    # remove dual header
-    clientNav <- clientNav[ClientAccountID != "ClientAccountID", ]
+    db <- getIbReport(reportId, tok)
     
-    #rerformat data
-    clientNav[,':=' (ReportDate= as.Date(ReportDate, format= "%Y%m%d"),
-                     Total= as.numeric(Total))]
+    # rename columns
+    colnames(db) <- c("ClientId", "TradeDate", "ibNav")
     
-    colnames(clientNav) <- c("ClientId", "TradeDate", "NAV")
+    # remove TimbreDual header
+    db <- db[ClientId != "ClientAccountID", ]
     
-    return(clientNav)
+    # reformat data
+    db[,':=' (TradeDate= as.Date(TradeDate, format= "%Y%m%d"),
+              ibNav= as.numeric(ibNav))]
     
 }

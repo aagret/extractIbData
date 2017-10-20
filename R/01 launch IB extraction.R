@@ -9,13 +9,13 @@
 ### Define Variables ###
 ########################
 
-# IB_Artha communication chanel token# (to updated periodically ie yearly)
+# IB_Artha communication chanel ibToken# (to updated periodically ie yearly)
 
 #####       ##########################
-token   <-  "409423572751697446678243"
+ibToken   <-  "409423572751697446678243"
 #####       ##########################   
-    
-# fees metrics (in %)
+
+# ibpaidFeess metrics (in %)
 
 #####       ####
 advFee  <-  0.50
@@ -61,16 +61,16 @@ source("R/ibFunctions.R")
 ######################
 
 # download YTD IB datas
-ibData <- getYtdData(token)
+ibData <- getYtdData(ibToken)
 
-# download YTD Artha fees from  IB
-fee <- getAdvFee(token)
+# download YTD Artha ibpaidFeess from  IB
+ibpaidFees <- getIbFees(ibToken)
 
 # download withdrawal/depositis from Ib account
-inOut <- getInOut(token)
+ibInOut <- getInOut(ibToken)
 
-# download clients NAV history
-clientNav <- getClientNav(token)
+# download clients ibNav history
+ibClientNav <- getClientNav(ibToken)
 
 
 ################################
@@ -78,10 +78,10 @@ clientNav <- getClientNav(token)
 ################################
 
 # extract Fx history from ibData
-fxHisto <- extractFxHisto(ibData)
+ibFxHisto <- extractFxHisto(ibData)
 
 # extract Equity&Future trades
-ytdTrades <- ibData[ibData$AssetClass == "STK", ]
+ibTrades <- ibData[AssetClass == "STK", ]
 
 
 ###################
@@ -89,18 +89,18 @@ ytdTrades <- ibData[ibData$AssetClass == "STK", ]
 ###################
 
 # merge Trades & Fx datas
-setkey(fxHisto,   TradeDate, Currency)
-setkey(ytdTrades, TradeDate, Currency)
+setkey(ibFxHisto, TradeDate, Currency)
+setkey(ibTrades,  TradeDate, Currency)
 
-ytdTrades <- fxHisto[ytdTrades]                     # merge
-ytdTrades[Currency == "CHF", Fx:= 1L]               # set CHF Fx to 1
+ibTrades <- ibFxHisto[ibTrades]                     # merge
+ibTrades[Currency == "CHF", Fx:= 1L]                # set CHF Fx to 1
 
-# merge NAV, Fees and inOut datas
-setkey(inOut,     ClientId, TradeDate)
-setkey(fee,       ClientId, TradeDate)
-setkey(clientNav, ClientId, TradeDate)
+# merge IbNav, paidFees and ibInOut datas
+setkey(ibInOut,     ClientId, TradeDate)
+setkey(ibpaidFees,  ClientId, TradeDate)
+setkey(ibClientNav, ClientId, TradeDate)
 
-clientNav <-  inOut[fee[clientNav[NAV != 0,]]]       # merge
+ibClientNav <-  ibInOut[ibpaidFees[ibClientNav[ibNav != 0, ]]]       # merge
 
 
 ###################################
@@ -108,39 +108,36 @@ clientNav <-  inOut[fee[clientNav[NAV != 0,]]]       # merge
 ###################################
 
 # format resulting data table
-clientNav[is.na(InOut), InOut:= 0]
-clientNav[is.na(Fee),   Fee:=   0]
+ibClientNav[is.na(InOut), InOut:= 0]
+ibClientNav[is.na(paidFee),   paidFee:=   0]
 
-# adjust Nav by accounting fees on correct dates
-#clientNav[, aNav:= calcAdjNav(NAV)]
-
-db <- calcAdjNav(NAV)
-clientNav <- db[clientNav]
-clientNav[, aNav:=aNav + cFee]
+# adjust Nav by accounting ibpaidFeess on correct dates
+ibClientNav <- calcAdjNav(ibClientNav)[ibClientNav]
+ibClientNav[, adjNav:= adjNav + dueFee]
 
 # group by quarter
-clientNav[, Q:= quarter(TradeDate)]
+ibClientNav[, Q:= quarter(TradeDate)]
 
 # calc High Water Mark
-clientNav[, Hwm:=  shift(aNav- cFee), by= c("ClientId")]
-clientNav[is.na(Hwm), Hwm:= aNav]
-clientNav[, Hwm:= cummax(Hwm), by= c("Q", "ClientId")]
+ibClientNav[, Hwm:=  shift(adjNav- dueFee), by= c("ClientId")]
+ibClientNav[is.na(Hwm), Hwm:= adjNav]
+ibClientNav[, Hwm:= cummax(Hwm), by= c("Q", "ClientId")]
 
-# calc Performance fee (estimated and Real end Quarter)
-clientNav[aNav >  Hwm, pFee:= (aNav - Hwm) * perfFee / 100, 
-          by= c("ClientId", "Q")]
+# calc Performance ibpaidFees (estimated and Real end Quarter)
+ibClientNav[adjNav >  Hwm, perfFee:= (adjNav - Hwm) * perfFee / 100, 
+            by= c("ClientId", "Q")]
 
-clientNav[aNav <= Hwm, pFee:=0, ]                         # 0 if lower than Hwm
+ibClientNav[adjNav <= Hwm, perfFee:=0, ]                        # 0 if lower than Hwm
 
-clientNav[, pFee:= cumsum(pFee),
-          by= ClientId]
+ibClientNav[, perfFee:= cumsum(perfFee),
+            by= ClientId]
 
-# calc advisory Fee
-clientNav[, aFee:= cumsum(c(0, diff(TradeDate)) * aNav * advFee / 36500),
-          by= ClientId]
+# calc advisory paidFee
+ibClientNav[, advFee:= cumsum(c(0, diff(TradeDate)) * adjNav * advFee / 36500),
+            by= ClientId]
 
-# calc Vat on Fees (for CH clients only)
-clientNav[, Vat:= (pFee + aFee) * 8 / 100]
+# calc Vat on paidFees (for CH clients only)
+ibClientNav[, Vat:= (perfFee + advFee) * 8 / 100]
 
 
 
@@ -150,24 +147,24 @@ clientNav[, Vat:= (pFee + aFee) * 8 / 100]
 #######################
 
 # extract Swiss Stamp from trade list
-timbre <- extractSwissStamp(ytdTrades)
-fwrite(timbre, "ibTimbre.csv")
+ibTimbre <- extractSwissStamp(ibTrades)
+fwrite(ibTimbre, "ibTimbre.csv")
 
-# calc total stamp per client and merge with clientNav
-clientNav <- timbre[, calcStamp(timbre)][clientNav]
+# calc total stamp per client and merge with ibClientNav
+ibClientNav <- ibTimbre[, calcStamp(ibTimbre)][ibClientNav]
 
 # format Stamp Datas
-clientNav[is.na(TF), TF:=0]
-clientNav[, TF:= cumsum(TF), by= ClientId]
+ibClientNav[is.na(timbre), timbre:= 0]
+ibClientNav[, timbre:= cumsum(timbre), by= ClientId]
 
-setcolorder(clientNav, c(colnames(clientNav)[-3], colnames(clientNav)[3]))
+setcolorder(ibClientNav, c(colnames(ibClientNav)[-3], colnames(ibClientNav)[3]))
 
-# calc Gross NAv ex Fees, VAt and Stramp Tax
-clientNav[, Gross:= aNav + cumsum(Fee), by= ClientId]
+# calc Gross NAv ex paidFees, VAt and Stramp Tax
+ibClientNav[, Gross:= adjNav + cumsum(paidFee), by= ClientId]
 
-# calc Net of fee Perormance (artha fee, all cost)
-clientNav[, fNet:= Gross - pFee - aFee - Vat - TF, by= ClientId]
-clientNav[, cNet:= Gross - pFee - aFee - Vat - TF, by= ClientId]
+# calc Net of ibpaidFees Perormance (artha ibpaidFees, all cost)
+ibClientNav[, fNet:= Gross - perfFee - advFee - Vat - timbre, by= ClientId]
+ibClientNav[, cNet:= Gross - perfFee - advFee - Vat - timbre, by= ClientId]
 
 
 ####
@@ -184,44 +181,42 @@ clientNav[, cNet:= Gross - pFee - aFee - Vat - TF, by= ClientId]
 ############ TEST AND DEBUG ZONE
 ####
 
-
-# group by quarter
-clientNav[, Q:= quarter(TradeDate)]
-
-clientNav[TradeDate > as.Date("2016-12-31") & 
-              TradeDate <= as.Date("2017-09-29"), 
-          .((aNav[.N] - Hwm[1]) * perfFee / 100,
-            (aNav[1] + aNav[.N]) /2 * advFee * 3 / 1200), 
-          by= c("ClientId", "Q")]
-
-
-
-cli <- "U2202020" # U1427234"
-plot(clientNav[ClientId== cli, 
-               .(TradeDate, exp(cumsum(c(0, ROC(Gross)[-1]))))], type="l", col="red")
-
-lines(clientNav[ClientId== cli, 
-                .(TradeDate, exp(cumsum(c(0, ROC(cNet)[-1]))))], col="blue")
-
-
-
-
-clientNav[, .(TradeDate, NAV, aNav, Gross, cNet,
-              c(0, exp(cumsum(ROC(aNav)[-1]))),
-              c(0, exp(cumsum(ROC(Gross)[-1]))),
-              c(0, exp(cumsum(ROC(cNet)[-1])))),
-          by= ClientId][ , .SD[.N,], by= ClientId]
-
-
-clientNav[, .SD[.N], by= ClientId,
-          .SDcols= c("pFee", "aFee", "Vat", "TF")]
-
-clientNav[TradeDate %in% as.Date(c("2016-12-30", "2017-03-31", "2017-06-30", "2017-09-29")), .SD, by= ClientId]
-
+# 
+# # group by quarter
+# ibClientNav[, Q:= quarter(TradeDate)]
+# 
+# ibClientNav[TradeDate > as.Date("2016-12-31") & 
+#               TradeDate <= as.Date("2017-09-29"), 
+#           .((adjNav[.N] - Hwm[1]) * perfFee / 100,
+#             (adjNav[1] + adjNav[.N]) /2 * advFee * 3 / 1200), 
+#           by= c("ClientId", "Q")]
+# 
+# 
+# 
+# cli <- "U2202020" # U1427234"
+# plot(ibClientNav[ClientId== cli, 
+#                .(TradeDate, exp(cumsum(c(0, ROC(Gross)[-1]))))], type="l", col="red")
+# 
+# lines(ibClientNav[ClientId== cli, 
+#                 .(TradeDate, exp(cumsum(c(0, ROC(cNet)[-1]))))], col="blue")
+# 
+# 
+# 
+# 
+# ibClientNav[, .(TradeDate, ibNav, adjNav, Gross, cNet,
+#               c(0, exp(cumsum(ROC(adjNav)[-1]))),
+#               c(0, exp(cumsum(ROC(Gross)[-1]))),
+#               c(0, exp(cumsum(ROC(cNet)[-1])))),
+#           by= ClientId][ , .SD[.N,], by= ClientId]
+# 
+# 
+# ibClientNav[, .SD[.N], by= ClientId,
+#           .SDcols= c("perfFee", "advFee", "Vat", "timbre")]
+# 
+# ibClientNav[TradeDate %in% as.Date(c("2016-12-30", "2017-03-31", "2017-06-30", "2017-09-29")), .SD, by= ClientId]
+# 
 
 ####
 ############ END OF TEST AND DEBUG ZONE
 ################################################################################
 ########################
-
-

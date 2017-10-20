@@ -1,26 +1,26 @@
 
-## impression timbre
+## impression ibTimbre
 
-setorder(timbre, OrderTime, Description, TradePrice, -ClientId)
+setorder(ibTimbre, OrderTime, Description, TradePrice, -ClientId) # utile?
 
 
-TF <- timbre
+timbre <- ibTimbre
 
 
 # add opération Number
-trades <-  unique(timbre[, .(OrderTime, Description)])
+trades <-  unique(ibTimbre[, .(OrderTime, Description)])
 trades[, opNbr:= rownames(trades)]
 
-setkey(TF, OrderTime, Description)
+setkey(timbre, OrderTime, Description)
 setkey(trades, OrderTime, Description)
 
-TF <- TF[trades]
-TF <- TF[, .(opNbr, TradeDate, Buy.Sell, Currency, abs(Quantity),
-             Description, TradePrice, ClientId,
-             SoumisSuisse, SoumisEtr, NonSoumis)]
+timbre <- timbre[trades]
+timbre <- timbre[, .(opNbr, TradeDate, Buy.Sell, Currency, abs(Quantity),
+                     Description, TradePrice, ClientId,
+                     SoumisSuisse, SoumisEtr, NonSoumis)]
 
 
-save(TF, file="TF.RData")
+save(timbre, file="timbre.RData")
 
 
 

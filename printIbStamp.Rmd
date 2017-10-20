@@ -1,5 +1,5 @@
 ---
-#title: "Registre du Timbre Fédéral de négociation"
+#title: "Registre TimbreDu Timbre Fédéral de négociation"
 author: "Artha Finance SA"
 
 classoption: landscape
@@ -33,78 +33,92 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(data.table)
 
-TF <- fread("ibTimbre.csv")
-TF <- TF[TradeDate > as.Date("2017-06-30") & TradeDate <= as.Date("2017-09-30"),]
+timbre <- fread("ibTimbre.csv")
+timbre <- timbre[TradeDate > as.Date("2017-06-30") & 
+                     TradeDate <= as.Date("2017-09-30"),]
 
-#load("TF.RData")
 
 # remove and change column names and reorder columns
-TF[, Symbol:= NULL]
+timbre[, Symbol:= NULL]
 
-colnames(TF) <- c("OrderTime", "cliNbr", "Isin", "Date.Op", "Type", 
-                  "Nominal", "Nom", "Prix", "Dev", "Cours",
-                  "Client", "Proceed", 
-                  "Soumis CH", "Soumis ETR", "Non Soumis")
+colnames(timbre) <- c("OrderTime", "cliNbr", 
+                      "Isin",      "Date.Op", 
+                      "Type",      "Nominal",   
+                      "Nom",       "Prix", 
+                      "Dev",       "Cours",
+                      "Client",    "Proceed",
+                      "Soumis CH", "Soumis ETR", 
+                      "Non Soumis")
 
-setorder(TF, OrderTime, Nom, -Client)
+setorder(timbre, OrderTime, Nom, -Client)
 
 # add Client Domicile
-TF[, Dom:= ifelse(grepl("Interactive", Client), "ETR", "CH")]
+timbre[, Dom:= ifelse(grepl("Interactive", Client), "ETR", "CH")]
 
 # add number of operation
-TF[, No:= .GRP, by=c("OrderTime", "Nom")] 
+timbre[, No:= .GRP, by= c("OrderTime", "Nom")] 
 
 # group data to fit A4 page ! change %/% to match length
-TF[, Grp:= c(cliNbr[1], rep(0,.N - 1L)), by= No]
-TF[, Grp:= cumsum(Grp) %/% 51 + 1]
+timbre[, Grp:= c(cliNbr[1], rep(0,.N - 1L)), by= No]
+timbre[, Grp:= cumsum(Grp) %/% 51 + 1]
 
 # remove some columns
-TF$OrderTime <- TF$cliNbr <- TF$Proceed <- NULL
-TF <- TF[, c("Grp", "No", "Date.Op", "Type", "Nominal",
-             "Nom", "Isin", "Prix", "Dev", "Cours",
-             "Client", "Dom", "Soumis CH", "Soumis ETR", "Non Soumis")]
+timbre$OrderTime <- timbre$cliNbr <- timbre$Proceed <- NULL
 
-# calc totals by Group and add empty columns to match TF structure
-tot <- TF[, lapply(.SD, sum, na.rm= TRUE), by= "Grp",
-          .SDcols= c("Soumis CH", "Soumis ETR", "Non Soumis")]
+timbre <- timbre[, c("Grp",       "No",          "Date.Op",    "Type", 
+                     "Nominal",   "Nom",         "Isin",       "Prix",
+                     "Dev",       "Cours",      "Client",      "Dom",   
+                     "Soumis CH", "Soumis ETR", "Non Soumis")]
 
-tot[, ':=' ('No'= 0L, Date.Op= "", Type= "", 
-               Nominal=  0L, Nom= "", Isin= "", Prix= 0, Dev= "", Cours= 0,
-            Client= "Contre valeur totale", Dom= "")]
+# calc totals by Group and add empty columns to match timbre structure
+subTotal <- timbre[, lapply(.SD, sum, na.rm= TRUE), 
+                   by= "Grp",
+                   .SDcols= c("Soumis CH", "Soumis ETR", "Non Soumis")]
+
+subTotal[, ':=' ('No'= 0L,     Date.Op= "", Type= "", 
+                 Nominal=  0L, Nom= "",     Isin= "", 
+                 Prix= 0,      Dev= "",     Cours= 0, 
+                 Client= "Contre valeur Totale", 
+                 Dom= "")]
 
 # add empty first line for clear printing
-empty <- copy(tot)
-set(empty, i=NULL, j= c(colnames(empty)[c(-1, -6)]), value= NA)
+empty <- copy(subTotal)
+set(empty, i= NULL, j= c(colnames(empty)[c(-1, -6)]), value= NA)
 
-# calc amounts due
-droits <- tot[, .(`Soumis CH` * 0.075 / 100,
-                  `Soumis ETR` * 0.15 / 100,
-                  0), 
-              by= "Grp"]
+# calc amounts TimbreDue
+droits <- subTotal[, .(`Soumis CH`  * 0.075 / 100,
+                       `Soumis ETR` * 0.15  / 100,
+                       0), 
+                   by= "Grp"]
 
 colnames(droits) <- c("Grp", "Soumis CH", "Soumis ETR", "Non Soumis")
 
-droits[, ':=' ('No'= 0L, Date.Op= "", Type= "", 
-               Nominal=  0L, Nom= "", Isin= "", Prix= 0, Dev= "", Cours= 0,
-               Client= "Droits négociation dus", Dom= "")]
+droits[, ':=' ('No'= 0L,     Date.Op= "", Type= "", 
+               Nominal=  0L, Nom= "",     Isin= "", 
+               Prix= 0,      Dev= "",     Cours= 0,
+               Client= "Droits négociation TimbreDus", 
+               Dom= "")]
 
 
-setcolorder(droits, colnames(TF))
-setcolorder(tot, colnames(TF))
-setcolorder(empty, colnames(TF))
+setcolorder(droits,   colnames(timbre))
+setcolorder(subTotal, colnames(timbre))
+setcolorder(empty,    colnames(timbre))
 
 
-printData <- do.call(rbind, list(TF, empty, tot, droits))
-printData[, Date.Op:=  as.character(strftime(as.Date(Date.Op, "%Y-%m-%d"), "%d-%m-%Y"))]
+printData <- do.call(rbind, list(timbre, empty, subTotal, droits))
+
+printData[, Date.Op:=  as.character(strftime(
+    as.Date(Date.Op, "%Y-%m-%d"), "%d-%m-%Y"))]
 
 printData[grepl("Contre", Client), Date.Op:= NA ]
 printData[grepl("Droits", Client), Date.Op:= NA ]
+
 printData[is.na(Client), Date.Op:= NA ]
 
-printData[!grepl("Interactive", Client), ':=' (No= NA,
+printData[!grepl("Interactive", Client), ':=' (No=      NA,
                                                Date.Op= NA,
-                                               Nom= NA,
-                                               Isin= NA)]
+                                               Nom=     NA,
+                                               Isin=    NA)]
 # remove zero's
 printData[printData==0] <- NA
 
@@ -131,22 +145,22 @@ bold <- function(x) {paste('{\\textbf{',x,'}}', sep ='')}
 
 
 for (g in 1:length(printData)) {
-
+    
     header <- data.table(matrix(c(strrep("-", 97),
                                   "Artha Finance SA",
                                   "Interactive Brokers (UK) Ltd",
-
+                                  
                                   "REGISTRE DES NEGOCIATIONS",
                                   NA,
                                   NA,
-
+                                  
                                   strrep("-", 97),
                                   as.character(strftime(Sys.Date(),
                                                         "%d %B %Y")),
                                   paste("Page: ", g)),
                                 3, 3))
-
-
+    
+    
     print(xtable(header, align=  c("llcr")),
           include.colnames = FALSE,
           hline.after= NULL,
@@ -157,70 +171,68 @@ for (g in 1:length(printData)) {
                   NA.string= '',
                   digits= c( 0, 0, 0, 0, 0, 0, 0, 3, 0, 4, 0, 0, 2, 2, 2),
                   align=  c("l||cc|crp{6.5cm}p{2.5cm}r|cr|lc||rr|r||"))
-
+    
     lines <- printData[[g]][grepl("Interacti", Client), which= TRUE]
-
+    
     print(tab,
-                 hline.after= c(-1, 0,
-                                lines,
-                                nrow(tab))
-                                
-                                ,sanitize.colnames.function = bold,
-                                #, table.placement = "t"
+          hline.after= c(-1, 0,
+                         lines,
+                         nrow(tab))
+          
+          ,sanitize.colnames.function= bold
+          #, table.placement= "t"
     )
-
-#,
-#                             ,
-    #              sanitize.colnames.function = bold)  # table.placement = "!p")
-
+    
 }
 
-total  <- tot[, lapply(.SD, sum, na.rm= TRUE),
-              .SDcols= c("Soumis CH", "Soumis ETR","Non Soumis")]
+total  <- subTotal[, lapply(.SD, sum, na.rm= TRUE),
+                   .SDcols= c("Soumis CH", "Soumis ETR", "Non Soumis")]
 
 total[, Totaux:= "Cumul trimestriel"]
 
-du <- droits[, lapply(.SD, sum, na.rm= TRUE),
-             .SDcols= c("Soumis CH", "Soumis ETR","Non Soumis")]
+TimbreDu <- droits[, lapply(.SD, sum, na.rm= TRUE),
+                   .SDcols= c("Soumis CH", "Soumis ETR", "Non Soumis")]
 
-du[, Totaux:= "Droits de négociations dûs"]
+TimbreDu[, Totaux:= "Droits de négociations dûs"]
 
-total <- rbind(total, du)
+total <- rbind(total, TimbreDu)
 total <- rbind(total, total[1])
 
 setcolorder(total, c(4, 1, 2, 3))
 
-du <- total[2, round((`Soumis CH` + `Soumis ETR`) / 0.05) * 0.05]
+TimbreDu <- total[2, round((`Soumis CH` + `Soumis ETR`) / 0.05) * 0.05]
 
 total[3, ':=' (Totaux= "Total a payer",
-             `Soumis CH`= 0,
-             `Soumis ETR`= 0,
-             `Non Soumis`= du)]
+               `Soumis CH`=  0,
+               `Soumis ETR`= 0,
+               `Non Soumis`= TimbreDu)]
 
 total <- xtable(total,
-              digits= c( 0, 0, 2, 2, 2),
-              align=  c("l||l|rr|r||"))
+                digits= c( 0, 0, 2, 2, 2),
+                align=  c("l||l|rr|r||"))
 
 print(total, hline.after= c(-1, 0, nrow(total) - 1, nrow(total)),
       sanitize.colnames.function = bold)
 
 
 # print totals by clients for control
-client <- TF[grepl("U", Client), 
-             .(sum(`Soumis CH` +`Soumis ETR`),
-               sum((`Soumis CH` * 0.075 /100) +
-                       (`Soumis ETR` * 0.15 /100))), 
-             by= Client]
+client <- timbre[grepl("U", Client), 
+                 .(sum(`Soumis CH` +`Soumis ETR`),
+                   sum((`Soumis CH` * 0.075 /100) +
+                           (`Soumis ETR` * 0.15 /100))), 
+                 by= Client]
+
 colnames(client) <- c("Client", "Cumul", "Total")
 
 client <- rbind(client, client[1])
+
 client[3, ':=' (Client= "Total à payer",
                 Cumul= NA,
                 Total= total[3,4])]
 
 client <- xtable(client,
-              digits= c( 0, 0, 0, 2),
-              align=  c("l||l||r|r||"))
+                 digits= c( 0, 0, 0, 2),
+                 align=  c("l||l||r|r||"))
 
 print(client, hline.after= c(-1, 0, nrow(client) - 1, nrow(client)),
       sanitize.colnames.function = bold)

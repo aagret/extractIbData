@@ -1,10 +1,11 @@
 
 # function to adjust Nav to account fees under proper date
-calcAdjNav <- function(db= clientNav) {
+calcAdjNav <- function(db= ibClientNav) {
     
-    db <- clientNav[Fee != 0, .(ClientId, TradeDate, Fee)]
+    db <- ibClientNav[paidFee != 0, .(ClientId, TradeDate, paidFee)]
     
-    db[, Qq:=as.Date(cut(as.Date(cut(TradeDate, "quarter")), "quarter")) - 1]
+    db[, Qq:= as.Date(cut(as.Date(cut(TradeDate, "quarter")), "quarter")) - 1]
+    
     db[, PayDate:= TradeDate]
     
     colnames(db)[3] <- "QFee"
@@ -13,21 +14,18 @@ calcAdjNav <- function(db= clientNav) {
     db[strftime(Qq, "%u") == 6, Qq:= Qq - 1]
     db[strftime(Qq, "%u") == 7, Qq:= Qq - 2]
     
-    setkey(db, ClientId, TradeDate)
+    setkey(db, ClientId, TradeDate) #utile?
     
-    db <- db[clientNav, roll= -Inf]
+    db <- db[ibClientNav, roll= -Inf]
     
-    db[, aNav:= NAV ]
-    db[TradeDate < PayDate & TradeDate >= Qq, aNav:= aNav - QFee, by= ClientId]
+    db[, adjNav:= ibNav ]
+    db[TradeDate < PayDate & TradeDate >= Qq, adjNav:= adjNav - QFee, by= ClientId]
     
-    db[TradeDate == Qq, cFee:= QFee, by= ClientId]
-    db[TradeDate != Qq, cFee:= 0, by= ClientId]
+    db[TradeDate == Qq, dueFee:= QFee, by= ClientId]
+    db[TradeDate != Qq, dueFee:= 0, by= ClientId]
     
-    db[is.na(cFee), cFee:=0]
+    db[is.na(dueFee), dueFee:=0]
     
-    db <- db[, .(ClientId, TradeDate, aNav, cFee)]
-    
-    return(db)
+    db <- db[, .(ClientId, TradeDate, adjNav, dueFee)]
     
 }
-    

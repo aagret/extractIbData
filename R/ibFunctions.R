@@ -14,14 +14,14 @@ source("R/Source/getIbReport.R")
 # download YtdDatas
 source("R/Source/getYtdData.R")
 
-# download client's NAV datas
+# download client's IbNav datas
 source("R/Source/getClientNav.R")
 
 # download inflow/outflows datas
 source("R/Source/getInOut.R")
 
-# download accounted Fees datas
-source("R/Source/getAdvFee.R")
+# download accounted paidFees datas
+source("R/Source/getIbFees.R")
 
 
 ##############################################
@@ -53,10 +53,4 @@ source("R/Source/calcHwm.R")
 
 # calc Swiss Stamp
 source("R/Source/calcStamp.R")
-
-
-
-
-
-
 

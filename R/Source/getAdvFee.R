@@ -1,10 +1,11 @@
 
 # function to extract Artha advisory fees from IB
-getAdvFee <- function(tok= token) {
+getIbFees <- function(tok= ibToken) {
     
-    # extract advisory Fees
+    # extract advisory paidFees
     reportId <- "265101"
-    db <- getIbReport(reportId, token)
+    
+    db <- getIbReport(reportId, ibToken)
     
     setDT(db)
     
@@ -13,7 +14,8 @@ getAdvFee <- function(tok= token) {
     
     # format datas adn rename columns
     db[, Date:= as.Date(Date, format= "%Y%m%d")]
-    colnames(db) <- c("ClientId", "TradeDate", "Fee")
+    
+    colnames(db) <- c("ClientId", "TradeDate", "paidFee")
     
     return(db)
     

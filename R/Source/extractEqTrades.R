@@ -1,9 +1,8 @@
 
-# function to extract Equjity and Futures trades from IB trades
-
+# function to extract Equity and Futures trades from IB trades ! usefull ?
 extractEqTrades <- function(db= ibData) {
     
-    # extract equities datas
+    # extract equities datas ! if DT DF n ot needed !
     db <- ibData[ibData$AssetClass == "STK", ]
     
     #format datas
@@ -17,4 +16,3 @@ extractEqTrades <- function(db= ibData) {
     return(db)
     
 }
-    

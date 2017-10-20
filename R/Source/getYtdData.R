@@ -1,13 +1,15 @@
 
-getYtdData <- function(tok= token) {
+getYtdData <- function(tok= ibToken) {
     
     # get yearly trades datas form IB web
     reportId    <- "139144" 
+    
     db <- getIbReport(reportId, tok)
     
     # remove multi header error
-    db <- db[!db$ClientAccountID == "ClientAccountID",]
-    colnames(db)[1:2] <- c("ClientId", "Currency")
+    db <- db[!ClientAccountID == "ClientAccountID", ]
+    
+    colnames(db)[c(1,2,7)] <- c("ClientId", "Currency", "Isin")
     
     # format datas
     db[, ":=" (TradeDate=    as.Date(TradeDate, format= "%Y%m%d"),
@@ -15,9 +17,6 @@ getYtdData <- function(tok= token) {
                TradePrice=   as.numeric(TradePrice),
                Proceeds=     abs(as.numeric(Proceeds)))]
     
-
-    
-    return(db)
     
 }
 

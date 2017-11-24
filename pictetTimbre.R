@@ -22,8 +22,8 @@ pictet <- pictet[, .(`Trade date`,
                      `Gross amount in trade currency`,
                      `Financial instrument type`)]
 
-colnames(pictet) <- c("TradeDate", "Buy.Sell", "Quantity", "Description", 
-                      "Isin", "TradePrice", "Currency", "ClientId", 
+colnames(pictet) <- c("Date.Op", "Type", "Nominal", "Description", 
+                      "Isin", "TradePrice", "Currency", "Client", 
                       "Proceeds", "Instument")
 
 

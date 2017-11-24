@@ -34,21 +34,21 @@ knitr::opts_chunk$set(echo = TRUE)
 library(data.table)
 
 timbre <- fread("ibTimbre.csv")
-timbre <- timbre[TradeDate > as.Date("2017-06-30") & 
-                     TradeDate <= as.Date("2017-09-30"),]
+timbre <- timbre[TradeDate > as.Date("2017-10-01") & 
+                     TradeDate <= as.Date("2017-12-31"),]
 
 
 # remove and change column names and reorder columns
-timbre[, Symbol:= NULL]
+#timbre[, Symbol:= NULL]
 
-colnames(timbre) <- c("OrderTime", "cliNbr", 
-                      "Isin",      "Date.Op", 
-                      "Type",      "Nominal",   
-                      "Nom",       "Prix", 
-                      "Dev",       "Cours",
-                      "Client",    "Proceed",
+colnames(timbre) <- c("OrderTime", "AssetClass", 
+                      "Nom", "Isin",
+                      "Date.Op", "Dev", 
+                      "Type", "Nominal",   
+                      "Prix",  "Proceed",
+                      "Client",  "Cours" , 
                       "Soumis CH", "Soumis ETR", 
-                      "Non Soumis")
+                      "Non Soumis", "cliNbr")
 
 setorder(timbre, OrderTime, Nom, -Client)
 

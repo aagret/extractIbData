@@ -44,18 +44,33 @@ extractPictetStamp <- function() {
     
     db[, ClientId:= as.character(ClientId)]
     db[, TradeDate:= as.Date(TradeDate, "%Y/%m/%d")]
-    db[, OrderTime:= as.Date(OrderTime, "%Y/%m/%d")]
+    db[, OrderTime:= strftime(as.Date(OrderTime, "%Y/%m/%d"),"%Y%m%d")]
+    
+    # change Asset Class Names
+    db[grepl("fund|Fund", AssetClass) &
+                 !Buy.Sell %in% c("Buy", "Sell"),
+       AssetClass:= "FND"]
+    
+    db[grepl("fund|Fund", AssetClass) &
+           Buy.Sell %in% c("Buy", "Sell"),
+       AssetClass:= "STK"]
+    
+    db[grepl("share", AssetClass), AssetClass:= "STK"]
+    
+    db[grepl("Bond", AssetClass), AssetClass:= "BND"]
+    
+
     
     # add client Domicile
     db[ , Dom:= switch(ClientId,
-                       `162306.002` = "CH",
+                       `162306.002` = "ETR",
                        `162675.001` = "ETR",
                        `164368.002` = "ETR",
-                       `167966.001` = "ETR",
-                       `169966.002` = "ETR",
-                       `170312.001` = "CH",
-                       `301335.001` = "CH",
-                       NA), 
+                       `167966.001` = "CH",
+                       `169966.002` = "CH",
+                       `170312.001` = "INS",
+                       `301335.001` = "INS",
+                       NA),
         by= ClientId]
     
 }
@@ -71,6 +86,7 @@ addFx <- function(db= ibTimbre, fx= ibFxHisto) {
     
     db  <- fx[db]                     # merge
     db[Currency == "CHF", Fx:= 1L]                # set CHF Fx to 1    
+
 }
 
 # add missing Isin
@@ -85,7 +101,7 @@ addIsin <- function(db= ibTimbre) {
     setkey(tickers, Symbol)
     
     db[Isin == "", Symbol:= paste0(Symbol, " US Equity")]
-    db[Isin == "", Isin:= tickers[Symbol, Isin]]
+    db[Isin == "", Isin:=   tickers[Symbol, Isin]]
     
     db <- db[, -7]
     
@@ -112,7 +128,7 @@ formatStamp <- function(db= ibTimbre) {
     # # change asset class type
     # db[, AssetClass:= "STK"]
     
-    db[grepl("Fixed", AssetClass), AssetClass:= "FXD"]
+    db[grepl("Fixed", AssetClass), AssetClass:= "BND"]
     db[grepl("fund",  AssetClass, 
              ignore.case = TRUE),  AssetClass:= "FND"]
     
@@ -124,7 +140,6 @@ formatStamp <- function(db= ibTimbre) {
 
     
 }
-
 
 # generate IB/Bk counterpart datas
 addBkData <- function(db= ibTimbre, bk= "Interactive Brokers, Ldn") {
@@ -146,7 +161,7 @@ addBkData <- function(db= ibTimbre, bk= "Interactive Brokers, Ldn") {
     bkTimbre <- bkTimbre[bkTrades]
     
     #add bank's name'
-    bkTimbre[, ClientId:= bk]
+    bkTimbre[, ClientId:= paste0(" ", bk)]
     
     bkTimbre[, Buy.Sell:= switch(tolower(Buy.Sell),
                                  ach = "VTE",
@@ -156,38 +171,36 @@ addBkData <- function(db= ibTimbre, bk= "Interactive Brokers, Ldn") {
                                  NA),
              by= Buy.Sell]
                   
+    bkTimbre[, Dom:= "INS"]
     
     db <- rbind(db, bkTimbre)
     
 }
 
-
-MERGE
-
-
-##### TODO
-
-
-
 # calculate stamp
 calcStamp <- function(db= ibTimbre) {
     
-
-    db[Currency == "CHF", ':=' (SoumisCH= Proceeds * Fx,
+    
+    db[grepl("CH", Isin), ':=' (SoumisCH= Proceeds * Fx,
                                 SoumisEtr= 0,
                                 NonSoumis= 0)]
     
-    db[Currency != "CHF", ':=' (SoumisCH= 0,
-                                SoumisEtr= Proceeds * Fx,
-                                NonSoumis= 0)]
+    db[!grepl("CH", Isin), ':=' (SoumisCH= 0,
+                                 SoumisEtr= Proceeds * Fx,
+                                 NonSoumis= 0)]
     
     db[Dom == "ETR" &
-           AssetClass == "FXD", ':=' (SoumisCH = 0,
+           AssetClass == "BND", ':=' (SoumisCH = 0,
                                       SoumisEtr= 0,
                                       NonSoumis= Proceeds * Fx)]
+    
     db[Buy.Sell == "REMB", ':=' (SoumisCH = 0,
                                  SoumisEtr= 0,
                                  NonSoumis= Proceeds * Fx)]
+    
+    db[Dom == "INS", ':=' (SoumisCH = 0,
+                           SoumisEtr= 0,
+                           NonSoumis= Proceeds * Fx)]
     
     db[db[, .I[.N], 
           by= c("OrderTime", "Description")][["V1"]], 
@@ -198,16 +211,9 @@ calcStamp <- function(db= ibTimbre) {
 }
 
 
-
+library(data.table)
 # get today's and current quarter Dates
 #quarterDates <- quarterDates(Sys.Date())
-quarterDates <- as.Date("2016-12-31")
-
-# sort ibTimbre
-setorder(db, OrderTime, Description, -ClientId)
-
-db[, cliNbr:= .N, by= c("OrderTime","Description")]
-
 
 pict <- extractPictetStamp()
 pict <- addFx(pict)
@@ -219,15 +225,27 @@ pict <- calcStamp(pict)
 
 ib <- extractIbStamp(ibTrades)
 ib <- addFx(ib)
-ib <-addIsin(ib)
+ib <- addIsin(ib)
 ib <- formatStamp(ib)
-ib <- addBkData(ib)
+ib <- addBkData(ib, "Interactive Brokers, Ldn")
 ib <- calcStamp(ib)
 
-ib[TradeDate >= as.Date("2017-06-30") & 
-       TradeDate <= as.Date("2017-09-30"), 
-   lapply(.SD, sum, na.rm=TRUE), 
-   .SDcols=c("SoumisCH", "SoumisEtr", "NonSoumis")]
 
+timbre <- rbind(pict, ib)
+setorder(timbre, OrderTime, Description, -ClientId)
+
+# add number of client per trade
+timbre[, cliNbr:= .N, by= c("OrderTime","Description")]
+
+
+
+fwrite(timbre, "timbre.csv")
+
+
+# ib[TradeDate >= as.Date("2017-06-30") & 
+#        TradeDate <= as.Date("2017-09-30"), 
+#    lapply(.SD, sum, na.rm=TRUE), 
+#    .SDcols=c("SoumisCH", "SoumisEtr", "NonSoumis")]
+# 
 
 

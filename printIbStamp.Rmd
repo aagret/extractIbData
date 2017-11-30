@@ -33,37 +33,35 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(data.table)
 
-timbre <- fread("ibTimbre.csv")
-timbre <- timbre[TradeDate > as.Date("2017-10-01") & 
+timbre <- fread("timbre.csv")
+timbre <- timbre[TradeDate > as.Date("2016-12-30") & 
                      TradeDate <= as.Date("2017-12-31"),]
 
 
 # remove and change column names and reorder columns
 #timbre[, Symbol:= NULL]
 
-colnames(timbre) <- c("OrderTime", "AssetClass", 
-                      "Nom", "Isin",
-                      "Date.Op", "Dev", 
-                      "Type", "Nominal",   
-                      "Prix",  "Proceed",
-                      "Client",  "Cours" , 
-                      "Soumis CH", "Soumis ETR", 
-                      "Non Soumis", "cliNbr")
+colnames(timbre) <- c("Date.Op",    "Dev",
+                      "Cours",      "OrderTime",
+                      "AssetClass", "Nom", 
+                      "Isin",       "Type", 
+                      "Nominal",    "Prix",
+                      "Proceed",    "Client",
+                      "Dom",        "Soumis CH", 
+                      "Soumis ETR", "Non Soumis",
+                      "nbrOfClient")
 
-setorder(timbre, OrderTime, Nom, -Client)
-
-# add Client Domicile
-timbre[, Dom:= ifelse(grepl("Interactive", Client), "ETR", "CH")]
 
 # add number of operation
 timbre[, No:= .GRP, by= c("OrderTime", "Nom")] 
 
 # group data to fit A4 page ! change %/% to match length
-timbre[, Grp:= c(cliNbr[1], rep(0,.N - 1L)), by= No]
-timbre[, Grp:= cumsum(Grp) %/% 51 + 1]
+timbre[, Grp:= c(nbrOfClient[1], rep(0,.N - 1L)), by= No]
+#timbre[, Grp:= cumsum(Grp) %/% 57 + 1]
+timbre[, Grp:= ceiling(cumsum(Grp)/ 56)]
 
 # remove some columns
-timbre$OrderTime <- timbre$cliNbr <- timbre$Proceed <- NULL
+timbre$OrderTime <- timbre$nbrOfClient <- timbre$Proceed <- NULL
 
 timbre <- timbre[, c("Grp",       "No",          "Date.Op",    "Type", 
                      "Nominal",   "Nom",         "Isin",       "Prix",
@@ -105,7 +103,7 @@ setcolorder(subTotal, colnames(timbre))
 setcolorder(empty,    colnames(timbre))
 
 
-printData <- do.call(rbind, list(timbre, empty, subTotal, droits))
+printData <- do.call(rbind, list(timbre, empty, subTotal, droits, empty))
 
 printData[, Date.Op:=  as.character(strftime(
     as.Date(Date.Op, "%Y-%m-%d"), "%d-%m-%Y"))]
@@ -115,7 +113,7 @@ printData[grepl("Droits", Client), Date.Op:= NA ]
 
 printData[is.na(Client), Date.Op:= NA ]
 
-printData[!grepl("Interactive", Client), ':=' (No=      NA,
+printData[!grepl("Interactive|Picte", Client), ':=' (No=      NA,
                                                Date.Op= NA,
                                                Nom=     NA,
                                                Isin=    NA)]
@@ -138,51 +136,54 @@ options(xtable.type= "latex",
         xtable.comment = FALSE,
         xtable.caption.width="p{30}",
         xtable.include.rownames= FALSE,
-        xtable.scalebox= 0.8,
+        xtable.scalebox= 0.7,
         xtable.format.args = list(big.mark = "'"))
 
 bold <- function(x) {paste('{\\textbf{',x,'}}', sep ='')}
 
 
 for (g in 1:length(printData)) {
-    
-    header <- data.table(matrix(c(strrep("-", 97),
+
+    header <- data.table(matrix(c(strrep("-", 112),
                                   "Artha Finance SA",
-                                  "Interactive Brokers (UK) Ltd",
-                                  
+                                  "Interactive Brokers (UK) Ltd, Ldn - Pictet, Lux",
+                                  NA,
+
                                   "REGISTRE DES NEGOCIATIONS",
                                   NA,
                                   NA,
-                                  
-                                  strrep("-", 97),
+                                  NA,
+
+                                  strrep("-", 112),
                                   as.character(strftime(Sys.Date(),
                                                         "%d %B %Y")),
-                                  paste("Page: ", g)),
-                                3, 3))
-    
-    
+                                  paste("Page: ", g),
+                                  NA),
+                                4, 3))
+
+
     print(xtable(header, align=  c("llcr")),
           include.colnames = FALSE,
           hline.after= NULL,
           sanitize.text.function= bold,
           table.placement = "t")
-    
+
     tab <- xtable(printData[[g]],
                   NA.string= '',
                   digits= c( 0, 0, 0, 0, 0, 0, 0, 3, 0, 4, 0, 0, 2, 2, 2),
-                  align=  c("l||cc|crp{6.5cm}p{2.5cm}r|cr|lc||rr|r||"))
-    
-    lines <- printData[[g]][grepl("Interacti", Client), which= TRUE]
-    
+                  align=  c("l||cc|crp{9cm}p{2.5cm}r|cr|lc||rr|r||"))
+
+    lines <- printData[[g]][grepl("Interacti|Pict", Client), which= TRUE]
+
     print(tab,
           hline.after= c(-1, 0,
                          lines,
                          nrow(tab))
-          
+
           ,sanitize.colnames.function= bold
           #, table.placement= "t"
     )
-    
+
 }
 
 total  <- subTotal[, lapply(.SD, sum, na.rm= TRUE),
@@ -216,7 +217,7 @@ print(total, hline.after= c(-1, 0, nrow(total) - 1, nrow(total)),
 
 
 # print totals by clients for control
-client <- timbre[grepl("U", Client), 
+client <- timbre[!grepl("Interact|Pict", Client), 
                  .(sum(`Soumis CH` +`Soumis ETR`),
                    sum((`Soumis CH` * 0.075 /100) +
                            (`Soumis ETR` * 0.15 /100))), 
@@ -226,7 +227,7 @@ colnames(client) <- c("Client", "Cumul", "Total")
 
 client <- rbind(client, client[1])
 
-client[3, ':=' (Client= "Total à payer",
+client[.N, ':=' (Client= "Total à payer",
                 Cumul= NA,
                 Total= total[3,4])]
 

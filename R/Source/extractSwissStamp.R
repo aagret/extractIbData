@@ -4,10 +4,11 @@ extractSwissStamp <- function(trade= ibTrades) {
     
     # get today's and current quarter Dates
     #quarterDates <- quarterDates(Sys.Date())
-    quarterDates <- as.Date("2016-12-31")
+    quarterDates <- as.Date(c("2017-12-31", "2018-03-31"))
     
     # extract Timbre datas
-    db <- trade[TradeDate >= quarterDates[1] &  AssetClass =="STK",
+    db <- trade[TradeDate >= quarterDates[1] &  TradeDate <= quarterDates[2] &
+                    AssetClass =="STK",
                 .(OrderTime, AssetClass,
                   Description, Symbol, Isin,
                   TradeDate, Currency,  
@@ -15,7 +16,7 @@ extractSwissStamp <- function(trade= ibTrades) {
                   Proceeds, ClientId, Fx)]
     
     #tickers <- fread ("/home/artha/Alexandre/Tfc/ticker4.csv")
-    tickers <- fread ("U:/Tfc/ticker4.csv")[, c(3, 2)]
+    tickers <- fread ("tickerBloomDHARMAEQ.csv")[, c(3, 2)]
     
     colnames(tickers) <- c("Symbol", "Isin")
     
@@ -78,5 +79,7 @@ extractSwissStamp <- function(trade= ibTrades) {
     db[, cliNbr:= .N, by= c("OrderTime","Description")]
     
     setkey(db, ClientId, TradeDate)
+    
+    return(db)
     
 }

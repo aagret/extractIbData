@@ -10,8 +10,8 @@
 # group by quarter
 ibClientNav[, Q:= quarter(TradeDate)]
 
-ibClientNav[TradeDate > as.Date("2016-12-31") &
-              TradeDate <= as.Date("2017-12-31"),
+ibClientNav[TradeDate > as.Date("2017-12-31") &
+              TradeDate <= as.Date("2018-03-31"),
           .((adjNav[.N] - Hwm[1]) * perfFee / 100,
             (adjNav[1] + adjNav[.N]) /2 * advFee * 3 / 1200),
           by= c("ClientId", "Q")]
@@ -20,11 +20,11 @@ ibClientNav[TradeDate > as.Date("2016-12-31") &
 library(quantmod)
 
 getSymbols("^GSPC", src="yahoo")
-SPX <- as.data.table(GSPC["2016-12-31/", 4])
+SPX <- as.data.table(GSPC["2017-12-31/2018-03-31", 4])
 
-cli <- "U1427234" #"U2202020" 
+cli <- "U1427234" #"U2202020" #
 
-plot(ibClientNav[ClientId== cli,
+lines(ibClientNav[ClientId== cli,
                  .(TradeDate, exp(cumsum(c(0, ROC(Gross)[-1]))))], type="l", col="red")
 
 lines(ibClientNav[ClientId== cli,
@@ -32,6 +32,17 @@ lines(ibClientNav[ClientId== cli,
 
 
 lines(SPX[, .(index, exp(cumsum(c(0, ROC(GSPC.Close)[-1]))))])
+
+
+library(PerformanceAnalytics)
+table.Stats(ibClientNav$Gross)
+    
+xt <- xts(x = ibClientNav[ClientId == cli, Gross], 
+          order.by = ibClientNav[ClientId == cli, TradeDate])
+  
+SharpeRatio(ROC(xt)[-1], Rf= 0.00966, FUN= "StdDev")
+table.AnnualizedReturns(ROC(xt)[-1], Rf= 0.000035)    
+table.Distributions(ROC(xt)[-1])
 
 
 

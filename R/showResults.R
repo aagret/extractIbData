@@ -11,7 +11,7 @@
 ibClientNav[, Q:= quarter(TradeDate)]
 
 ibClientNav[TradeDate > as.Date("2017-12-31") &
-              TradeDate <= as.Date("2018-03-31"),
+              TradeDate <= as.Date("2018-09-30"),
           .((adjNav[.N] - Hwm[1]) * perfFee / 100,
             (adjNav[1] + adjNav[.N]) /2 * advFee * 3 / 1200),
           by= c("ClientId", "Q")]
@@ -24,7 +24,7 @@ SPX <- as.data.table(GSPC["2017-12-31/2018-03-31", 4])
 
 cli <- "U1427234" #"U2202020" #
 
-lines(ibClientNav[ClientId== cli,
+plot(ibClientNav[ClientId== cli,
                  .(TradeDate, exp(cumsum(c(0, ROC(Gross)[-1]))))], type="l", col="red")
 
 lines(ibClientNav[ClientId== cli,

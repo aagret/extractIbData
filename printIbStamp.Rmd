@@ -4,10 +4,10 @@ classoption: landscape
 geometry: margin=0.5cm
 header-includes: \usepackage{fancyhdr} \pagestyle{fancy}
 output:
-  pdf_document: default
+  word_document: default
   html_document:
     df_print: paged
-  word_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}

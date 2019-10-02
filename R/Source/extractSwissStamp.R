@@ -4,8 +4,7 @@ extractSwissStamp <- function(trade= ibTrades) {
     
     # get today's and current quarter Dates
     #quarterDates <- quarterDates(Sys.Date())
-    quarterDates <- as.Date(c("2018-06-30", "2018-09-30"))
-    
+    quarterDates <- as.Date(c("2019-06-30", "2019-09-30"))
     # extract Timbre datas
     db <- trade[TradeDate >= quarterDates[1] &  TradeDate <= quarterDates[2] &
                     AssetClass =="STK",

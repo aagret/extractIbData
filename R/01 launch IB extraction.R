@@ -11,9 +11,10 @@
 
 # IB_Artha communication chanel ibToken# (to updated periodically ie yearly)
 
-#####       ##########################
+
+#####       ############################
 ibToken   <-  "286419338804594810409279"
-#####       ##########################   
+#####       ############################   
 
 # ibpaidFeess metrics (in %)
 

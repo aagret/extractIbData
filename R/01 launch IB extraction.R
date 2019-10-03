@@ -12,7 +12,7 @@
 # IB_Artha communication chanel ibToken# (to updated periodically ie yearly)
 
 #####       ##########################
-ibToken   <-  "280265450571377242472700"
+ibToken   <-  "286419338804594810409279"
 #####       ##########################   
 
 # ibpaidFeess metrics (in %)
@@ -109,7 +109,7 @@ ibClientNav <-  ibInOut[ibpaidFees[ibClientNav[ibNav != 0, ]]]       # merge
 
 # format resulting data table
 ibClientNav[is.na(InOut), InOut:= 0]
-ibClientNav[is.na(paidFee),   paidFee:=   0]
+ibClientNav[is.na(paidFee),   paidFee:= 0]
 
 # adjust Nav by accounting ibpaidFeess on correct dates
 ibClientNav <- calcAdjNav(ibClientNav)[ibClientNav]

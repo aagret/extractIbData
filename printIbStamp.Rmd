@@ -4,15 +4,16 @@ classoption: landscape
 geometry: margin=0.5cm
 header-includes: \usepackage{fancyhdr} \pagestyle{fancy}
 output:
-  word_document: default
+  pdf_document: default
   html_document:
     df_print: paged
-  pdf_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
 
 knitr::opts_chunk$set(echo = TRUE)
+
 
 ```
 
@@ -44,7 +45,7 @@ timbre[, No:= .GRP, by= c("OrderTime", "Nom")]
 # group data to fit A4 page ! change %/% to match length
 timbre[, Grp:= c(cliNbr[1], rep(0,.N - 1L)), by= No]
 #timbre[, Grp:= cumsum(Grp) %/% 57 + 1]
-timbre[, Grp:= ceiling(cumsum(Grp)/ 61)]
+timbre[, Grp:= ceiling(cumsum(Grp)/ 60)]
 
 # remove some columns
 timbre$OrderTime <- timbre$cliNbr <- timbre$Proceeds <- timbre$AssetClass <- NULL
@@ -91,8 +92,8 @@ setcolorder(empty,    colnames(timbre))
 printData <- do.call(rbind, list(timbre, empty, subTotal, droits, empty))
 
 printData[, Date.Op:= as.Date(Date.Op)]
-printData <- printData[Date.Op >= as.Date("2018-06-30") & 
-                     Date.Op <= as.Date("2018-09-30"),]
+printData <- printData[Date.Op >= as.Date("2019-06-30") & 
+                     Date.Op <= as.Date("2019-09-30"),]
 
 printData[, Date.Op:=  as.character(strftime(
     as.Date(Date.Op, "%Y-%m-%d"), "%d-%m-%Y"))]

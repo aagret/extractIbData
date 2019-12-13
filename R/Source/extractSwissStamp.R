@@ -4,7 +4,7 @@ extractSwissStamp <- function(trade= ibTrades) {
     
     # get today's and current quarter Dates
     #quarterDates <- quarterDates(Sys.Date())
-    quarterDates <- as.Date(c("2018-09-30", "2018-12-31"))
+    quarterDates <- as.Date(c("2019-09-30", "2019-12-31"))
     
     # extract Timbre datas
     db <- trade[TradeDate >= quarterDates[1] &  TradeDate <= quarterDates[2] &
@@ -16,9 +16,9 @@ extractSwissStamp <- function(trade= ibTrades) {
                   Proceeds, ClientId, Fx)]
     
     #tickers <- fread ("/home/artha/Alexandre/Tfc/ticker4.csv")
-    tickers <- fread ("/home/artha/R-Projects/BBU_upload/tickerBloomDEQ.csv")[, c(3, 2)]
+    tickers <- fread ("/home/artha/R-Projects/DFE/Config/tickers.csv")
     
-    colnames(tickers) <- c("Symbol", "Isin")
+    colnames(tickers) <- c("Isin", "Symbol")
     
     db2 <- db[Isin == "",][, Symbol:= paste0(Symbol, " US Equity")]
     
@@ -26,7 +26,7 @@ extractSwissStamp <- function(trade= ibTrades) {
     
     setkey(tickers, Symbol)
     setkey(db2, Symbol)
-    
+
     db2  <- tickers[db2][,-6, with=FALSE]
     
     db <- rbind(db1, db2)[, -4]
